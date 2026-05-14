@@ -2,7 +2,7 @@
 
 ## Estado general
 Última actualización: 2026-05-14
-Versión en producción: `0a20e2e` (feat: notification intelligence engine)
+Versión en producción: `7cdd8fa` (feat: relationship graph visual con react-flow)
 
 ## URLs de producción
 - Web: https://sir-web.vercel.app
@@ -11,9 +11,9 @@ Versión en producción: `0a20e2e` (feat: notification intelligence engine)
 
 ## Progreso general
 ```
-████████████░░░░░░░░ 10/17 módulos completados (59%)
+█████████████░░░░░░░ 11/17 módulos completados (65%)
 ```
-✅ Completo: 10 | 🔄 Parcial: 1 | ⬜ Pendiente: 6
+✅ Completo: 11 | 🔄 Parcial: 1 | ⬜ Pendiente: 5
 
 ---
 
@@ -59,35 +59,16 @@ Versión en producción: `0a20e2e` (feat: notification intelligence engine)
 ---
 
 ### 04 — Relationship Graph Visual
-**Estado:** ⬜ Pendiente
-**Deploy:** —
-**Commit:** —
-**Prompt usado:**
-```
-Construye la visualización del grafo de relaciones en apps/web.
-
-1. Instala react-flow (reactflow@^11) en apps/web
-2. Crea apps/web/src/app/(app)/graph/page.tsx — Server Component que:
-   - Fetches personas del usuario desde Supabase (tabla people)
-   - Fetches relaciones desde Supabase (tabla relationships)
-   - Pasa datos como props al componente cliente
-3. Crea apps/web/src/app/(app)/graph/RelationshipGraph.tsx — Client Component:
-   - Usa ReactFlow con nodos (personas) y aristas (relaciones)
-   - Color de nodo por categoría (familia, trabajo, social, mentor)
-   - Grosor de arista por strength (0-1)
-   - Click en nodo abre panel lateral con detalles de la persona
-   - Botón "Añadir relación" abre modal
-4. Crea apps/web/src/app/(app)/graph/GraphControls.tsx — filtros:
-   - Por categoría de relación
-   - Por strength mínimo
-5. Agrega link "Grafo" en Sidebar entre Personas y Señales
-6. Commit: feat: relationship graph visual con react-flow
-```
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `7cdd8fa` (2026-05-14)
+**Prompt usado:** Construye la visualización del grafo de relaciones en apps/web con ReactFlow v11. Layout circular con user en centro y personas como nodos periféricos. Color de nodo por relationship_type (family/professional/personal), grosor de arista por strength, animación en relaciones estratégicas. Click en nodo abre side panel con métricas (fuerza, reciprocidad, confianza) y link a perfil. GraphControls con filtro por tipo y slider de fuerza mínima. Sidebar link Grafo entre Personas y Señales.
 **Verificación:**
-- [ ] Grafo renderiza con nodos reales
-- [ ] Click en nodo muestra panel de detalles
-- [ ] Filtros funcionan correctamente
-**Notas:** react-flow, visualización D3-like, datos desde Neo4j/Supabase
+- [x] Grafo renderiza con nodos reales (layout circular)
+- [x] Click en nodo muestra side panel con métricas
+- [x] Filtros por tipo de relación y fuerza mínima funcionan
+- [x] Build Next.js sin errores (49.9 kB bundle)
+**Notas:** reactflow@^11, transpilePackages configurado, layout circular con radio dinámico
 
 ---
 
