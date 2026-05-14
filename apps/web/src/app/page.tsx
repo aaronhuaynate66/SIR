@@ -1,8 +1,7 @@
-export default function HomePage() {
-  return (
-    <main>
-      <h1>SIR</h1>
-      <p>Sistema de Inteligencia Relacional</p>
-    </main>
-  );
+import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/supabase-server';
+
+export default async function HomePage() {
+  const user = await getAuthUser();
+  redirect(user ? '/dashboard' : '/login');
 }

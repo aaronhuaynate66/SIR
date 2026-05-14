@@ -16,7 +16,7 @@ export class ClaudeClient implements AIClient {
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: options.maxTokens ?? 2048,
-      system: options.systemPrompt,
+      ...(options.systemPrompt !== undefined ? { system: options.systemPrompt } : {}),
       messages: [{ role: 'user', content: options.prompt }],
     });
 

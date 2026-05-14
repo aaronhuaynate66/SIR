@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getAdminClient } from '@/lib/supabase-server';
 import type { MemoryLayer } from '@sir/db';
 

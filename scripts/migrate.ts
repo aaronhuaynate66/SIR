@@ -22,10 +22,11 @@ if (!DB_URL) {
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'supabase', 'migrations');
 
 async function run() {
-  // Importar postgres dinámicamente para evitar error en CI sin la dep
-  let sql: Awaited<ReturnType<typeof import('postgres')['default']>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let sql: any;
   try {
-    const postgres = (await import('postgres')).default;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const postgres = require('postgres');
     sql = postgres(DB_URL!, { ssl: 'require' });
   } catch {
     console.error('\n✗  Instala la dependencia primero: npm install -D postgres\n');

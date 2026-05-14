@@ -47,10 +47,10 @@ create policy "memories_all_own"
 
 -- Función para búsqueda semántica
 create or replace function public.search_memories(
-  p_user_id  uuid,
-  p_layer    public.memory_layer default null,
-  p_query    vector(768),
-  p_limit    int default 10,
+  p_user_id   uuid,
+  p_query     vector(768),
+  p_layer     public.memory_layer default null,
+  p_limit     int default 10,
   p_threshold real default 0.7
 )
 returns table (
