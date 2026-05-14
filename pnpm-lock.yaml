@@ -133,6 +133,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.35.0
+        version: 0.35.0
       '@sir/ai':
         specifier: workspace:*
         version: link:../../packages/ai
