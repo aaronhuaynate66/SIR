@@ -1,6 +1,7 @@
 import { getServiceClient, getAuthUser } from '@/lib/supabase-server';
 import { trackEvent } from '@sir/db';
 import { checkRateLimit } from '@/lib/ratelimit';
+import { costTracker } from '@sir/ai';
 import type { DbPerson, DbRelationship } from '@sir/db';
 
 export const runtime = 'nodejs';
@@ -257,9 +258,12 @@ export async function POST(req: Request): Promise<Response> {
     const humanState = stateRes.data as StateRow | null;
     const prompt     = buildPrompt({ person, rel, relScore, humanState, memories, signals: personSignals });
 
+    // Cost limit check — force static fallback if over $5/month
+    const overLimit = await costTracker.isOverMonthlyLimit(userId).catch(() => false);
+
     // No Claude key — static fallback
     const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (!apiKey) {
+    if (!apiKey || overLimit) {
       const fallback = buildFallbackBriefing(person, rel);
       return new Response(
         fallback + META_SEP + JSON.stringify({ inputTokens: 0, outputTokens: 0, costUsd: 0, briefingId: null }),
@@ -318,6 +322,7 @@ export async function POST(req: Request): Promise<Response> {
             // non-critical
           }
 
+          costTracker.track(userId, 'claude-sonnet-4-6', inputTokens, outputTokens).catch(() => undefined);
           trackEvent(userId, 'briefing_viewed', {
             personId,
             briefingId,

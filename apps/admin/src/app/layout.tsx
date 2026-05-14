@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: '/memories', label: 'Memorias'  },
   { href: '/signals',   label: 'Señales'   },
   { href: '/analytics', label: 'Analytics' },
+  { href: '/costs',     label: 'Costos AI'  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

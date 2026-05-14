@@ -2,6 +2,7 @@ import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import { trackEvent } from '@sir/db';
 import { checkRateLimit } from '@/lib/ratelimit';
 import { captureSignalSchema } from '@/lib/schemas';
+import { costTracker } from '@sir/ai';
 import type { SocialSignalType } from '@sir/db';
 
 export const runtime = 'nodejs';
@@ -128,6 +129,7 @@ export async function POST(req: Request): Promise<Response> {
           messages:   [{ role: 'user', content: EXTRACTION_PROMPT(content) }],
         });
         const text = msg.content[0]?.type === 'text' ? msg.content[0].text : '';
+        costTracker.track(user.id, 'claude-haiku-4-5-20251001', msg.usage.input_tokens, msg.usage.output_tokens).catch(() => undefined);
         const json = extractJson(text);
         if (json && SOCIAL_TYPES.includes(json['signal_type'] as SocialSignalType)) {
           const st = json['signal_type'] as SocialSignalType;
