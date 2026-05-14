@@ -83,3 +83,34 @@ turbo test
 # Lint
 turbo lint
 ```
+
+## Deployment Checklist (obligatorio después de cada módulo)
+
+1. Build local:
+   ```bash
+   npm run build 2>&1 | tail -20
+   ```
+   → Si hay errores TypeScript o de compilación, corrígelos antes de continuar
+
+2. Tests:
+   ```bash
+   npx turbo test 2>&1 | tail -10
+   ```
+   → Si fallan tests, corrígelos
+
+3. Commit y push:
+   ```bash
+   git add .
+   git commit -m "feat/fix: [descripción]"
+   git push origin master
+   ```
+
+4. Verificar deploys en Vercel (esperar 2 minutos):
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" https://sir-web.vercel.app
+   curl -s -o /dev/null -w "%{http_code}" https://sir-admin.vercel.app
+   ```
+   → Ambos deben retornar 200. Si retornan otro código, revisar
+     logs, corregir y repetir hasta que ambos sean 200.
+
+5. Actualizar ROADMAP.md marcando el módulo como ✅ Completo
