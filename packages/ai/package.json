@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.35.0",
+    "@sir/db": "workspace:*",
     "@sir/shared": "workspace:*",
     "ollama": "^0.5.0"
   },
