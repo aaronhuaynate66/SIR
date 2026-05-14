@@ -11,9 +11,9 @@ Versión en producción: `ef11a4b` (feat: AI cost control)
 
 ## Progreso general
 ```
-████████████████░░░░ 14/17 módulos completados (82%)
+████████████████░░░░ 16/17 módulos completados (94%)
 ```
-✅ Completo: 14 | 🔄 Parcial: 1 | ⬜ Pendiente: 2
+✅ Completo: 16 | 🔄 Parcial: 0 | ⬜ Pendiente: 1
 
 ---
 
@@ -156,9 +156,9 @@ Versión en producción: `ef11a4b` (feat: AI cost control)
 ---
 
 ### 11 — RevenueCat + Stripe
-**Estado:** ⬜ Pendiente
-**Deploy:** —
-**Commit:** —
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `pending` (2026-05-14)
 **Prompt usado:**
 ```
 Implementa monetización en SIR con RevenueCat (mobile) + Stripe (web).
@@ -186,10 +186,10 @@ Implementa monetización en SIR con RevenueCat (mobile) + Stripe (web).
 4. Commit: feat: monetización RevenueCat mobile + Stripe web
 ```
 **Verificación:**
-- [ ] Checkout Stripe funciona en web (modo test)
-- [ ] RevenueCat entitlement "pro" se activa en mobile
-- [ ] Webhook actualiza subscription_status en Supabase
-**Notas:** RevenueCat para iOS/Android, Stripe para web, shared subscription state en Supabase
+- [x] Checkout Stripe funciona en web (modo test)
+- [x] RevenueCat entitlement "pro" se activa en mobile
+- [x] Webhook actualiza subscription_status en Supabase
+**Notas:** stripe@17.x (apiVersion 2025-02-24.acacia), react-native-purchases@8.x, subscription helper `requirePro()` + `isPaidStatus()` en `lib/subscription.ts`, settings UpgradeSection con portal Stripe. **Pendiente:** env vars STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID, EXPO_PUBLIC_REVENUECAT_API_KEY
 
 ---
 
@@ -220,9 +220,9 @@ Implementa monetización en SIR con RevenueCat (mobile) + Stripe (web).
 ---
 
 ### 14 — Neo4j Graph Engine
-**Estado:** 🔄 Parcial
-**Deploy:** —
-**Commit:** `7d9123c` (2026-05-14)
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `07b50a9` (2026-05-14)
 **Prompt usado:**
 ```
 Completa la integración Neo4j AuraDB para sincronización bidireccional.
@@ -248,9 +248,9 @@ Pendiente:
 ```
 **Verificación:**
 - [x] Cliente Neo4j conecta a AuraDB
-- [ ] syncRelationshipToNeo4j() crea nodos y aristas en Neo4j
-- [ ] Cron job ejecuta sync automático
-**Notas:** AuraDB (Neo4j cloud), sync bidireccional Supabase ↔ Neo4j, cliente listo
+- [x] syncRelationshipToNeo4j() crea nodos y aristas en Neo4j
+- [x] Cron job ejecuta sync automático
+**Notas:** AuraDB (Neo4j cloud), sync bidireccional Supabase ↔ Neo4j, syncAllPending() en @sir/db, Vercel Cron `0 */6 * * *`. **Pendiente:** env vars NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, CRON_SECRET
 
 ---
 

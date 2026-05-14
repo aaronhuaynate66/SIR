@@ -28,12 +28,18 @@ export type SocialSignalType =
   | 'achievement'
   | 'loss';
 
+export type SubscriptionStatus = 'free' | 'pro' | 'enterprise';
+
 export interface DbUser {
   id: string;
   email: string;
   name: string;
   avatar_url: string | null;
   preferences: Record<string, unknown>;
+  subscription_status: SubscriptionStatus;
+  stripe_customer_id: string | null;
+  revenuecat_user_id: string | null;
+  subscription_expires_at: string | null;
   created_at: string;
   updated_at: string;
 }

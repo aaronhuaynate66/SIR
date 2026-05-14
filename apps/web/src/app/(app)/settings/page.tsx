@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import { costTracker } from '@sir/ai';
+import { isPaidStatus } from '@/lib/subscription';
 import SettingsForm from './SettingsForm';
+import UpgradeSection from './UpgradeSection';
 import type { NotificationPrefs } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -13,11 +15,13 @@ export default async function SettingsPage() {
 
   const { data } = await getServiceClient()
     .from('users')
-    .select('push_enabled, email_enabled, dnd_start_hour, dnd_end_hour, max_notifs_per_day, timezone')
+    .select('push_enabled, email_enabled, dnd_start_hour, dnd_end_hour, max_notifs_per_day, timezone, subscription_status')
     .eq('id', user.id)
     .single();
 
   const usage = await costTracker.getMonthlyUsage(user.id).catch(() => null);
+  const subStatus = (data as { subscription_status?: string } | null)?.subscription_status ?? 'free';
+  const isPro = isPaidStatus(subStatus);
 
   const prefs: NotificationPrefs = {
     push_enabled:       (data as { push_enabled?: boolean } | null)?.push_enabled       ?? true,
@@ -64,6 +68,8 @@ export default async function SettingsPage() {
           </p>
         </div>
       )}
+
+      <UpgradeSection isPro={isPro} />
 
       <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #2a2d3e' }}>
         <Link
