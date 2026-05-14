@@ -17,6 +17,17 @@ export type SignalType =
   | 'insight'
   | 'external';
 
+export type SocialSignalType =
+  | 'promotion'
+  | 'job_change'
+  | 'travel'
+  | 'birthday'
+  | 'publication'
+  | 'life_event'
+  | 'health_event'
+  | 'achievement'
+  | 'loss';
+
 export interface DbUser {
   id: string;
   email: string;
@@ -49,6 +60,13 @@ export interface DbSignal {
   processed: boolean;
   memory_id: string | null;
   created_at: string;
+  // Social intelligence fields (added in migration 000006)
+  signal_type: SocialSignalType | null;
+  opportunity_score: number | null;
+  action_recommendation: string | null;
+  person_id: string | null;
+  processed_at: string | null;
+  source: string;
 }
 
 export type RelationshipType = 'personal' | 'professional' | 'family';
@@ -112,4 +130,6 @@ export type InsertMemory = Pick<DbMemory, 'user_id' | 'layer' | 'content'> &
   Partial<Pick<DbMemory, 'embedding' | 'metadata' | 'importance' | 'expires_at' | 'accessed_at'>>;
 
 export type InsertSignal = Pick<DbSignal, 'user_id' | 'type'> &
-  Partial<Pick<DbSignal, 'payload' | 'memory_id'>>;
+  Partial<Pick<DbSignal, 'payload' | 'memory_id' | 'processed' |
+    'signal_type' | 'opportunity_score' | 'action_recommendation' |
+    'person_id' | 'processed_at' | 'source'>>;

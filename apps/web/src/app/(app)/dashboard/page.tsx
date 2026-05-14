@@ -20,6 +20,17 @@ const SIGNAL_COLORS: Record<string, string> = {
   relationship: '#60a5fa', task: '#fbbf24', insight: '#a78bfa', external: '#94a3b8',
 };
 
+const OPP_COLORS: Record<string, string> = {
+  promotion: '#34d399', job_change: '#818cf8', travel: '#60a5fa',
+  birthday: '#f472b6', publication: '#a78bfa', life_event: '#fcd34d',
+  health_event: '#94a3b8', achievement: '#fbbf24', loss: '#6b7280',
+};
+const OPP_LABELS: Record<string, string> = {
+  promotion: 'Promoción', job_change: 'Cambio de rol', travel: 'Viaje',
+  birthday: 'Cumpleaños', publication: 'Publicación', life_event: 'Evento vital',
+  health_event: 'Salud', achievement: 'Logro', loss: 'Pérdida',
+};
+
 const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 function avatarColor(name: string) { return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length] ?? '#6366f1'; }
 function initials(name: string) { return name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase(); }
@@ -38,6 +49,7 @@ async function getDashboardData(userId: string) {
     stateRes,
     signalsRecent,
     relsRes,
+    opportunitiesRes,
   ] = await Promise.all([
     db.from('memories').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     db.from('signals').select('*', { count: 'exact', head: true }).eq('user_id', userId),
@@ -59,6 +71,12 @@ async function getDashboardData(userId: string) {
       .select('id, person_id, strength, reciprocity, trust_score, stage, last_contact_at, contact_frequency_days')
       .eq('user_id', userId)
       .limit(50),
+    db.from('signals')
+      .select('id, signal_type, opportunity_score, action_recommendation, person_id, created_at')
+      .eq('user_id', userId)
+      .not('signal_type', 'is', null)
+      .order('opportunity_score', { ascending: false })
+      .limit(3),
   ]);
 
   // Build advisor suggestions locally (same algorithm as /api/advisor)
@@ -111,6 +129,20 @@ async function getDashboardData(userId: string) {
     .sort((a, b) => b.contact_score - a.contact_score)
     .slice(0, 5);
 
+  // Build opportunities with person names
+  type OppRow = { id: string; signal_type: string; opportunity_score: number; action_recommendation: string; person_id: string | null; created_at: string };
+  const rawOpps = (opportunitiesRes.data ?? []) as OppRow[];
+  const oppPersonIds = [...new Set(rawOpps.filter(o => o.person_id).map(o => o.person_id as string))];
+  let oppPeopleMap = new Map<string, { id: string; name: string }>();
+  if (oppPersonIds.length > 0) {
+    const { data: oppPeople } = await db.from('people').select('id, name').in('id', oppPersonIds);
+    oppPeopleMap = new Map(((oppPeople ?? []) as Array<{ id: string; name: string }>).map(p => [p.id, p]));
+  }
+  const opportunities = rawOpps.map(o => ({
+    ...o,
+    person: o.person_id ? (oppPeopleMap.get(o.person_id) ?? null) : null,
+  }));
+
   return {
     totalMemories:   memoriesRes.count  ?? 0,
     totalSignals:    signalsRes.count   ?? 0,
@@ -120,6 +152,7 @@ async function getDashboardData(userId: string) {
     recentSignals:   (signalsRecent.data ?? []) as DbSignal[],
     suggestions,
     userAvailable:   humanState ? humanState.availability_score >= 50 : true,
+    opportunities,
   };
 }
 
@@ -185,6 +218,66 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Opportunities widget */}
+      {data.opportunities.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#e2e8f0', margin: 0 }}>Oportunidades</h2>
+            <span style={{
+              background: '#f59e0b33', color: '#fbbf24', borderRadius: 20,
+              padding: '2px 8px', fontSize: 11, fontWeight: 700,
+            }}>
+              {data.opportunities.length}
+            </span>
+            <Link href="/signals" style={{ marginLeft: 'auto', fontSize: 12, color: '#818cf8', textDecoration: 'none' }}>
+              Ver todas →
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {data.opportunities.map(opp => {
+              const color = OPP_COLORS[opp.signal_type] ?? '#94a3b8';
+              return (
+                <div key={opp.id} style={{
+                  background: '#1a1d27', border: '1px solid #2a2d3e',
+                  borderLeft: `3px solid ${color}`,
+                  borderRadius: '0 12px 12px 0', padding: '12px 16px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                      background: color + '22', color, border: `1px solid ${color}44`,
+                    }}>
+                      {OPP_LABELS[opp.signal_type] ?? opp.signal_type}
+                    </span>
+                    <span style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 800, color: scoreColor(opp.opportunity_score) }}>
+                      {opp.opportunity_score}
+                    </span>
+                  </div>
+                  {opp.person && (
+                    <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
+                      {opp.person.name}
+                    </p>
+                  )}
+                  <p style={{ margin: '0 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.5,
+                    display: '-webkit-box', overflow: 'hidden', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {opp.action_recommendation}
+                  </p>
+                  {opp.person && (
+                    <Link href={`/people/${opp.person.id}`} style={{
+                      fontSize: 11, fontWeight: 600, color,
+                      textDecoration: 'none', padding: '4px 10px',
+                      background: color + '15', border: `1px solid ${color}33`, borderRadius: 6,
+                    }}>
+                      Actuar →
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Advisor suggestions */}
       {data.suggestions.length > 0 && (

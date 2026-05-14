@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: '⊞' },
   { href: '/people',    label: 'Personas',  icon: '◎' },
+  { href: '/signals',   label: 'Señales',   icon: '◆' },
   { href: '/memories',  label: 'Memorias',  icon: '◈' },
   { href: '/state',     label: 'Estado',    icon: '◉' },
 ];
