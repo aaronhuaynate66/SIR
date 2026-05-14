@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest, AuthError } from '@/lib/auth';
 import { getServiceClient } from '@/lib/supabase-server';
+import { trackEvent } from '@sir/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,6 +69,12 @@ export async function POST(req: Request): Promise<NextResponse> {
       console.error('[POST /api/human-state]', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    trackEvent(userId, 'state_updated', {
+      compositeScore:    scores.composite_score,
+      availabilityScore: scores.availability_score,
+      interactionRisk:   scores.interaction_risk,
+    }).catch(() => undefined);
 
     return NextResponse.json(data, { status: 201 });
   } catch (err) {

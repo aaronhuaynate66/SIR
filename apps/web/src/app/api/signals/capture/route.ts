@@ -1,4 +1,5 @@
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
+import { trackEvent } from '@sir/db';
 import type { SocialSignalType } from '@sir/db';
 
 export const runtime = 'nodejs';
@@ -216,6 +217,13 @@ export async function POST(req: Request): Promise<Response> {
       importance: Math.min(10, Math.round(extracted.opportunity_score / 10)),
       metadata:   { signal_id: signalId, signal_type: extracted.signal_type, person_id: personId },
     });
+
+    trackEvent(user.id, 'signal_captured', {
+      signalId,
+      signalType:       extracted.signal_type,
+      opportunityScore: extracted.opportunity_score,
+      ...(personId ? { personId } : {}),
+    }).catch(() => undefined);
 
     return Response.json({
       signalId,

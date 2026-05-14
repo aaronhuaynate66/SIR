@@ -7,3 +7,4 @@ export * from './repositories/signals';
 export * from './repositories/people';
 export * from './repositories/relationships';
 export * from './repositories/notifications';
+export * from './repositories/analytics';

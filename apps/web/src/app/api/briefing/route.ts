@@ -1,4 +1,5 @@
-import { getServiceClient } from '@/lib/supabase-server';
+import { getServiceClient, getAuthUser } from '@/lib/supabase-server';
+import { trackEvent } from '@sir/db';
 import type { DbPerson, DbRelationship } from '@sir/db';
 
 export const runtime = 'nodejs';
@@ -309,6 +310,14 @@ export async function POST(req: Request): Promise<Response> {
           } catch {
             // non-critical
           }
+
+          trackEvent(userId, 'briefing_viewed', {
+            personId,
+            briefingId,
+            inputTokens,
+            outputTokens,
+            costUsd,
+          }).catch(() => undefined);
 
           controller.enqueue(encoder.encode(
             META_SEP + JSON.stringify({ inputTokens, outputTokens, costUsd, briefingId })
