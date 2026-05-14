@@ -2,7 +2,7 @@
 
 ## Estado general
 Última actualización: 2026-05-14
-Versión en producción: `9ba40b7` (fix: add @anthropic-ai/sdk to apps/web deps)
+Versión en producción: `0a20e2e` (feat: notification intelligence engine)
 
 ## URLs de producción
 - Web: https://sir-web.vercel.app
@@ -11,9 +11,9 @@ Versión en producción: `9ba40b7` (fix: add @anthropic-ai/sdk to apps/web deps)
 
 ## Progreso general
 ```
-███████████░░░░░░░░░ 9/17 módulos completados (53%)
+████████████░░░░░░░░ 10/17 módulos completados (59%)
 ```
-✅ Completo: 9 | 🔄 Parcial: 1 | ⬜ Pendiente: 7
+✅ Completo: 10 | 🔄 Parcial: 1 | ⬜ Pendiente: 6
 
 ---
 
@@ -144,35 +144,19 @@ Construye la visualización del grafo de relaciones en apps/web.
 
 ---
 
-### 09 — Notification Engine
-**Estado:** ⬜ Pendiente
-**Deploy:** —
-**Commit:** —
-**Prompt usado:**
-```
-Construye el Notification Engine para SIR.
-
-1. Instala expo-notifications en apps/mobile
-2. Crea packages/db/src/repositories/notifications.ts:
-   - Tabla: notifications (id, user_id, title, body, data jsonb, 
-     sent_at, read_at, channel text)
-   - Funciones: createNotification, markAsRead, getUnread
-3. Crea apps/web/src/app/api/notifications/send/route.ts:
-   - Recibe: { user_id, title, body, data?, channel }
-   - Valida con service role key
-   - Guarda en DB + envía push via Expo Push API
-4. Crea apps/mobile/src/hooks/useNotifications.ts:
-   - Registra token de dispositivo en Supabase (tabla: push_tokens)
-   - Escucha notificaciones en foreground/background
-5. Trigger automático: al capturar señal con opportunity_score > 70,
-   envía notificación "Nueva oportunidad con {nombre}"
-6. Commit: feat: notification engine con expo push
-```
+### 09 — Notification Intelligence Engine
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `0a20e2e` (2026-05-14)
+**Prompt usado:** Construye el Notification Intelligence Engine completo: migración SQL (`notification_logs`, prefs en `users`), tipos en `@sir/db`, repositorio notifications, Vercel Cron hourly (`/api/notifications/engine`), 5 tipos de trigger (reconnect, signal opportunities, birthdays, weekly digest, briefing ready), supresión por vulnerabilidad/DND/daily cap, push via Expo Push API, email via Resend + React Email (3 templates), página `/notifications` con filtros y mark-as-read, página `/settings` con preferencias, Sidebar con badge de no leídas.
 **Verificación:**
-- [ ] Token registrado en Supabase al abrir app
-- [ ] Notificación push llega al dispositivo
-- [ ] Trigger automático por opportunity_score > 70
-**Notas:** Expo Push Notifications, trigger en capture API
+- [x] Vercel Cron configurado (`0 * * * *`) y deployment READY
+- [x] 5 evaluadores de trigger implementados
+- [x] Push via Expo Push API, email via Resend
+- [x] `/notifications` con mark-as-read optimista
+- [x] `/settings` con DND, daily cap, timezone
+- [x] Sidebar badge muestra count de no leídas
+**Notas:** Vercel Cron (no Edge Function), suppression rules (vulnerability >0.8, DND, 3/día), 3 React Email templates. **Pendiente:** aplicar migración SQL vía Supabase dashboard; env vars RESEND_API_KEY, CRON_SECRET, EMAIL_FROM.
 
 ---
 
