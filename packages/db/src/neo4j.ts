@@ -1,6 +1,7 @@
 import neo4j, { Driver } from 'neo4j-driver';
 import type { Neo4jConfig } from './types';
 import type { DbPerson, DbRelationship } from './schema';
+import { getSupabaseClient } from './supabase';
 
 let _driver: Driver | null = null;
 
@@ -133,4 +134,64 @@ export async function getNetworkDepth(userId: string): Promise<NetworkDepth> {
   } finally {
     await session.close();
   }
+}
+
+export interface Neo4jStats {
+  nodes: number;
+  edges: number;
+}
+
+// Count nodes and edges in Neo4j
+export async function getNeo4jStats(): Promise<Neo4jStats> {
+  const session = getNeo4jDriver().session();
+  try {
+    const [nodesRes, edgesRes] = await Promise.all([
+      session.run('MATCH (p:Person) RETURN count(p) AS count'),
+      session.run('MATCH ()-[r:KNOWS]->() RETURN count(r) AS count'),
+    ]);
+    type IntLike = { toNumber(): number };
+    const nodes = (nodesRes.records[0]?.get('count') as IntLike | undefined)?.toNumber() ?? 0;
+    const edges = (edgesRes.records[0]?.get('count') as IntLike | undefined)?.toNumber() ?? 0;
+    return { nodes, edges };
+  } finally {
+    await session.close();
+  }
+}
+
+export interface SyncResult {
+  synced: number;
+  failed: number;
+}
+
+// Batch-sync all relationships with neo4j_sync_status = 'pending'
+export async function syncAllPending(limit = 50): Promise<SyncResult> {
+  const db = getSupabaseClient();
+
+  const { data } = await db
+    .from('relationships')
+    .select('id, user_id, person_id, strength, reciprocity, trust_score, relationship_type, last_contact_at, contact_frequency_days, stage, created_at, updated_at')
+    .eq('neo4j_sync_status', 'pending')
+    .limit(limit);
+
+  if (!data?.length) return { synced: 0, failed: 0 };
+
+  let synced = 0;
+  let failed = 0;
+
+  for (const row of data as Omit<DbRelationship, 'neo4j_sync_status'>[]) {
+    try {
+      const { data: personData } = await db.from('people').select('*').eq('id', row.person_id).maybeSingle();
+      if (!personData) { failed++; continue; }
+
+      const rel: DbRelationship = { ...row, neo4j_sync_status: 'pending' };
+      await syncRelationshipToNeo4j(row.user_id, personData as DbPerson, rel);
+      await db.from('relationships').update({ neo4j_sync_status: 'synced' }).eq('id', row.id);
+      synced++;
+    } catch {
+      await db.from('relationships').update({ neo4j_sync_status: 'failed' }).eq('id', row.id).then(() => undefined, () => undefined);
+      failed++;
+    }
+  }
+
+  return { synced, failed };
 }

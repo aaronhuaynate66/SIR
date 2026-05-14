@@ -100,6 +100,7 @@ export interface DbRelationship {
   last_contact_at: string | null;
   contact_frequency_days: number | null;
   stage: RelationshipStage;
+  neo4j_sync_status: 'pending' | 'synced' | 'failed';
   created_at: string;
   updated_at: string;
 }

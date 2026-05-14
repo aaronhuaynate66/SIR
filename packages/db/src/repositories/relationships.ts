@@ -7,6 +7,10 @@ async function _syncToNeo4j(rel: DbRelationship): Promise<void> {
   const person = await findPersonById(rel.person_id);
   if (!person) return;
   await syncRelationshipToNeo4j(rel.user_id, person, rel);
+  await getSupabaseClient()
+    .from('relationships')
+    .update({ neo4j_sync_status: 'synced' })
+    .eq('id', rel.id);
 }
 
 export async function createRelationship(data: InsertRelationship): Promise<DbRelationship> {

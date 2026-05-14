@@ -70,6 +70,7 @@ const mockRel: DbRelationship = {
   last_contact_at: '2026-05-01T00:00:00Z',
   contact_frequency_days: 30,
   stage: 'active',
+  neo4j_sync_status: 'pending',
   created_at: '2026-05-14T00:00:00Z',
   updated_at: '2026-05-14T00:00:00Z',
 };
