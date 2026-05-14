@@ -12,3 +12,4 @@ coverage/
 .vercel
 *.tsbuildinfo
 supabase/.temp/
+package-lock.json

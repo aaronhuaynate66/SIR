@@ -11,8 +11,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@sir/db": "*",
-    "@sir/shared": "*",
+    "@sir/db": "workspace:*",
+    "@sir/shared": "workspace:*",
     "@supabase/supabase-js": "^2.47.0",
     "next": "14.2.18",
     "react": "^18.3.0",

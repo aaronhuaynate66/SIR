@@ -52,6 +52,12 @@ describe('MemoryEngine', () => {
         processed: false,
         memory_id: null,
         created_at: new Date().toISOString(),
+        signal_type: null,
+        opportunity_score: null,
+        action_recommendation: null,
+        person_id: null,
+        processed_at: null,
+        source: 'manual',
       };
 
       await engine.process(signal);
@@ -70,6 +76,12 @@ describe('MemoryEngine', () => {
         processed: false,
         memory_id: null,
         created_at: new Date().toISOString(),
+        signal_type: null,
+        opportunity_score: null,
+        action_recommendation: null,
+        person_id: null,
+        processed_at: null,
+        source: 'manual',
       };
 
       await engine.process(signal);
