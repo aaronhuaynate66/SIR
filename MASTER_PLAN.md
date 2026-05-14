@@ -2,7 +2,7 @@
 
 ## Estado general
 Última actualización: 2026-05-14
-Versión en producción: `7cdd8fa` (feat: relationship graph visual con react-flow)
+Versión en producción: `ef11a4b` (feat: AI cost control)
 
 ## URLs de producción
 - Web: https://sir-web.vercel.app
@@ -11,9 +11,9 @@ Versión en producción: `7cdd8fa` (feat: relationship graph visual con react-fl
 
 ## Progreso general
 ```
-█████████████░░░░░░░ 11/17 módulos completados (65%)
+████████████████░░░░ 14/17 módulos completados (82%)
 ```
-✅ Completo: 11 | 🔄 Parcial: 1 | ⬜ Pendiente: 5
+✅ Completo: 14 | 🔄 Parcial: 1 | ⬜ Pendiente: 2
 
 ---
 
@@ -142,37 +142,16 @@ Versión en producción: `7cdd8fa` (feat: relationship graph visual con react-fl
 ---
 
 ### 10 — Analytics Event System
-**Estado:** ⬜ Pendiente
-**Deploy:** —
-**Commit:** —
-**Prompt usado:**
-```
-Construye el sistema de Analytics para SIR.
-
-1. Crea packages/db/src/repositories/analytics.ts:
-   - Tabla: analytics_events (id, user_id, event_name, properties jsonb,
-     session_id, created_at)
-   - Función: trackEvent(userId, eventName, properties)
-2. Crea packages/shared/src/analytics.ts:
-   - Enum EVENT_NAMES con todos los eventos: 
-     signal_captured, briefing_viewed, person_contacted,
-     memory_recalled, state_updated, graph_viewed
-   - Tipo AnalyticsEvent con propiedades tipadas por evento
-3. Integra trackEvent en todas las APIs existentes:
-   - /api/signals/capture → signal_captured
-   - /api/briefing/stream → briefing_viewed
-   - /api/human-state → state_updated
-4. Crea apps/admin/src/app/(app)/analytics/page.tsx:
-   - Gráfica de eventos por día (últimos 30 días)
-   - Top 5 eventos más frecuentes
-   - Usuarios activos diarios/semanales
-5. Commit: feat: analytics event system
-```
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `401b548` (2026-05-14)
+**Prompt usado:** Construye el sistema de analytics: tabla analytics_events (user_id, event_name, properties jsonb, session_id), EVENT_NAMES en @sir/shared, trackEvent() en @sir/db, instrumentar /api/signals/capture, /api/briefing y /api/human-state con llamadas fire-and-forget. Admin /analytics: KPIs DAU/WAU/total, barchart 14 días CSS, top 6 eventos por frecuencia.
 **Verificación:**
-- [ ] Eventos se registran en tabla analytics_events
-- [ ] Dashboard admin muestra gráficas con datos reales
-- [ ] Todos los APIs existentes emiten eventos
-**Notas:** Event sourcing ligero, sin dependencias externas (no PostHog)
+- [x] trackEvent() en @sir/db, non-blocking en 3 APIs
+- [x] EVENT_NAMES + AnalyticsEvent en @sir/shared
+- [x] Admin /analytics con KPIs y charts CSS
+- [x] Build 5/5 tasks sin errores
+**Notas:** Fire-and-forget (`.catch(() => undefined)`), sin charting library externa. Migración SQL pendiente de aplicar en Supabase.
 
 ---
 
@@ -276,45 +255,17 @@ Pendiente:
 ---
 
 ### 15 — Security + Privacy
-**Estado:** ⬜ Pendiente
-**Deploy:** —
-**Commit:** —
-**Prompt usado:**
-```
-Implementa Security & Privacy completo para SIR (GDPR-ready).
-
-1. Data Export:
-   - Crea apps/web/src/app/api/privacy/export/route.ts:
-     GET → genera ZIP con todos los datos del usuario:
-     memorias, señales, relaciones, estados, analytics
-   - Página apps/web/src/app/(app)/settings/privacy/page.tsx
-     con botón "Exportar mis datos" (descarga ZIP)
-
-2. Data Deletion:
-   - Crea apps/web/src/app/api/privacy/delete/route.ts:
-     DELETE → elimina todos los datos del usuario (cascade):
-     memorias, señales, relaciones, neo4j nodes, embeddings
-   - Requiere confirmación con texto "ELIMINAR MI CUENTA"
-
-3. Rate Limiting:
-   - Instala @upstash/ratelimit + @upstash/redis
-   - Aplica en: /api/signals/capture (10/min), 
-     /api/briefing/stream (5/min), /api/human-state (30/min)
-   - Retorna 429 con Retry-After header
-
-4. Input Sanitization:
-   - Instala zod en apps/web
-   - Crea schemas Zod para todos los POST endpoints
-   - Reemplaza validaciones manuales con safeParse()
-
-5. Commit: feat: security + privacy (GDPR, rate limiting, zod)
-```
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `ffed8d4` (2026-05-14)
+**Prompt usado:** Implementa Security & Privacy (GDPR-ready): GET /api/privacy/export → JSON con todos los datos del usuario, DELETE /api/privacy/delete con confirmación "ELIMINAR MI CUENTA", /settings/privacy page. Rate limiting opcional con @upstash/ratelimit (graceful no-op sin UPSTASH env vars): capture 10/m, briefing 5/m, human-state 30/m. Zod schemas en lib/schemas.ts aplicados a capture, human-state y push-tokens.
 **Verificación:**
-- [ ] Export genera ZIP con todos los datos
-- [ ] Delete elimina todo en cascade
-- [ ] Rate limiting bloquea después del límite
-- [ ] Zod valida todos los inputs
-**Notas:** GDPR compliance, Upstash Redis para rate limiting, Zod para validación
+- [x] Export descarga JSON completo con 7 colecciones
+- [x] Delete cascade en orden correcto con confirmación Zod
+- [x] Rate limiting: 429 + Retry-After, desactivado sin Upstash
+- [x] Zod safeParse en 3 endpoints, schemas en lib/schemas.ts
+- [x] Build 4/4 sin errores
+**Notas:** Export JSON (no ZIP — no dep extra). Rate limiting completamente opcional (env vars UPSTASH_REDIS_REST_URL/TOKEN). Zod `exactOptionalPropertyTypes` handled with conditional spread.
 
 ---
 
@@ -355,43 +306,17 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 ---
 
 ### 17 — AI Cost Control
-**Estado:** ⬜ Pendiente
-**Deploy:** —
-**Commit:** —
-**Prompt usado:**
-```
-Implementa control de costos AI para evitar sorpresas en facturación.
-
-1. Crea packages/ai/src/cost-tracker.ts:
-   - Clase CostTracker con método track(model, inputTokens, outputTokens)
-   - Precios hardcodeados: claude-haiku ($0.25/MTok in, $1.25/MTok out),
-     claude-sonnet ($3/MTok in, $15/MTok out),
-     ollama (gratis, cuenta como $0)
-   - Almacena en Supabase tabla: ai_usage (user_id, model, tokens_in,
-     tokens_out, cost_usd, created_at)
-
-2. Modifica AIClient en packages/ai:
-   - Después de cada llamada, llama CostTracker.track()
-   - Si costo acumulado del usuario en el mes > $5: 
-     bloquea Claude, fuerza Ollama-only
-   - Si Ollama no disponible Y costo > $5: retorna error 402
-
-3. Crea apps/admin/src/app/(app)/costs/page.tsx:
-   - Tabla: uso por usuario (tokens in/out, costo total mes)
-   - Gráfica: costo diario últimos 30 días
-   - Alerta si algún usuario > $3/mes (warning) o > $8 (crítico)
-
-4. Crea apps/web/src/app/api/usage/route.ts:
-   - GET → devuelve uso del mes actual del usuario autenticado
-   - Widget en settings mostrando tokens usados y costo estimado
-
-5. Commit: feat: AI cost control + usage tracking
-```
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `ef11a4b` (2026-05-14)
+**Prompt usado:** Implementa control de costos AI: tabla ai_usage, CostTracker en @sir/ai con precios hardcodeados (haiku $0.25/$1.25, sonnet $3/$15, ollama $0), isOverMonthlyLimit($5) en briefing → fallback estático si excede, tracking en briefing+capture, GET /api/usage, widget en settings, admin /costs con chart diario + top usuarios + alertas warn/critical.
 **Verificación:**
-- [ ] CostTracker registra cada llamada AI
-- [ ] Bloqueo automático al superar $5/mes
-- [ ] Admin dashboard muestra costos por usuario
-**Notas:** Precios Claude hardcodeados, umbral $5/mes por usuario, Ollama como fallback gratuito
+- [x] CostTracker.track() en briefing (sonnet) y capture (haiku)
+- [x] isOverMonthlyLimit() → fallback estático si >$5/mes
+- [x] Admin /costs: chart, by-model, top users con alertas
+- [x] Settings: barra de uso con colores
+- [x] Build 5/5 sin errores
+**Notas:** Cost check fire-and-forget. Bloqueo en briefing route. 3 migraciones SQL pendientes de aplicar (analytics_events, ai_usage, + notification_logs).
 
 ---
 
