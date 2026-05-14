@@ -11,6 +11,10 @@ export type Result<T, E = Error> =
   | { ok: true; value: T }
   | { ok: false; error: E };
 
+export type SignalType =
+  | 'interaction' | 'emotion' | 'location'
+  | 'relationship' | 'task' | 'insight' | 'external';
+
 export type AIProvider = 'ollama' | 'claude';
 
 export interface AIConfig {
