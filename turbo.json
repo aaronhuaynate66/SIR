@@ -7,10 +7,13 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "env": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
         "SUPABASE_URL",
         "SUPABASE_ANON_KEY",
         "SUPABASE_SERVICE_ROLE_KEY",
         "ANTHROPIC_API_KEY",
+        "OLLAMA_BASE_URL",
         "NEO4J_URI",
         "NEO4J_USER",
         "NEO4J_PASSWORD"
