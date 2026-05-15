@@ -40,10 +40,19 @@
     "testMatch": [
       "**/src/__tests__/**/*.test.ts?(x)"
     ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(react-native|@react-native|@react-native-async-storage|expo|@expo|react-native-purchases)/)"
+    ],
     "moduleNameMapper": {
       "^@sir/shared$": "<rootDir>/../../packages/shared/src/index.ts",
-      "^react$": "<rootDir>/../../node_modules/react"
+      "^react$": "<rootDir>/../../node_modules/react",
+      "^@react-native-async-storage/async-storage$": "<rootDir>/src/__mocks__/@react-native-async-storage/async-storage"
     },
+    "collectCoverageFrom": [
+      "src/lib/**/*.ts",
+      "!src/lib/supabase.ts",
+      "!src/**/*.d.ts"
+    ],
     "coverageThreshold": {
       "global": {
         "lines": 80

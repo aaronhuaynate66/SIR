@@ -14,9 +14,26 @@ jest.mock('@sir/db', () => ({
   markSignalProcessed: jest.fn().mockResolvedValue(undefined),
 }));
 
+const SIGNAL_LAYERS: Record<string, string[]> = {
+  interaction: ['sensory', 'working', 'episodic', 'semantic'],
+  emotion:     ['emotional', 'working'],
+  location:    ['episodic', 'working'],
+  relationship:['social', 'episodic'],
+  task:        ['procedural', 'working', 'episodic'],
+  insight:     ['semantic', 'prophetic'],
+  external:    ['sensory', 'working'],
+};
+
 jest.mock('../lib/engine', () => ({
   getMemoryEngine: jest.fn().mockReturnValue({
-    process: jest.fn().mockResolvedValue(undefined),
+    processAndRespond: jest.fn().mockImplementation((signal: { type: string }) =>
+      Promise.resolve({
+        layersActivated: SIGNAL_LAYERS[signal.type] ?? ['sensory'],
+        response: 'Procesado.',
+        context: [],
+        content: '',
+      })
+    ),
   }),
 }));
 
@@ -60,7 +77,7 @@ describe('handleCreateSignal', () => {
     const { createSignal, markSignalProcessed } = await import('@sir/db');
     expect(createSignal).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'u-1' }));
     expect(markSignalProcessed).toHaveBeenCalledWith('sig-1');
-    expect(result).toEqual({ signalId: 'sig-1', processed: true, layersActivated: ['sensory', 'working', 'episodic', 'semantic'] });
+    expect(result).toEqual({ signalId: 'sig-1', processed: true, layersActivated: ['sensory', 'working', 'episodic', 'semantic'], response: 'Procesado.' });
   });
 
   it('returns correct layers for each signal type', async () => {

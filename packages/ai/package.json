@@ -34,6 +34,7 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
+    "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
     "moduleNameMapper": {
       "^@sir/db$": "<rootDir>/../db/src/index.ts",
       "^@sir/shared$": "<rootDir>/../shared/src/index.ts"
