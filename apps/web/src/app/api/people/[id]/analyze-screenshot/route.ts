@@ -100,11 +100,12 @@ export async function POST(
       }],
     });
 
-    const raw = msg.content[0]?.type === 'text' ? msg.content[0].text.trim() : '{}';
+    const raw   = msg.content[0]?.type === 'text' ? msg.content[0].text.trim() : '{}';
+    const clean = raw.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
 
     let result: AnalysisResult;
     try {
-      result = JSON.parse(raw) as AnalysisResult;
+      result = JSON.parse(clean) as AnalysisResult;
     } catch {
       result = { type: 'unknown', data: { raw_summary: raw.slice(0, 200) } };
     }
