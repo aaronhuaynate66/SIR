@@ -125,6 +125,11 @@ export async function updatePersonExtraFieldsAction(
     anniversary?:   string | null;
     instagram_url?: string | null;
     linkedin_url?:  string | null;
+    location?:      string | null;
+    education?:     string | null;
+    notes?:         string | null;
+    role?:          string | null;
+    organization?:  string | null;
   },
 ): Promise<ActionResult> {
   const user = await getAuthUser();
@@ -167,7 +172,9 @@ export async function confirmScreenshotAction(
     if (confirmedData.email         !== undefined && confirmedData.email)         update['email']        = confirmedData.email;
     if (confirmedData.phone         !== undefined && confirmedData.phone)         update['phone']        = confirmedData.phone;
 
-    if (confirmedData.notes !== undefined && confirmedData.notes) update['notes'] = confirmedData.notes;
+    if (confirmedData.notes     !== undefined && confirmedData.notes)     update['notes']     = confirmedData.notes;
+    if (confirmedData.location  !== undefined && confirmedData.location)  update['location']  = confirmedData.location;
+    if (confirmedData.education !== undefined && confirmedData.education) update['education'] = confirmedData.education;
 
     if (Object.keys(update).length > 0) {
       const { error } = await db

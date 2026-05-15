@@ -4,7 +4,7 @@ import BriefingButton, { type BriefingRecord } from '@/components/BriefingButton
 import InteractionForm from './InteractionForm';
 import RelationshipTypeEditor from './RelationshipTypeEditor';
 import ScreenshotAnalyzer from './ScreenshotAnalyzer';
-import PersonExtraFieldsEditor from './PersonExtraFieldsEditor';
+import PersonProfileCards from './PersonProfileCards';
 import type { DbPerson, DbRelationship, PersonRelationshipType } from '@sir/db';
 
 export const dynamic = 'force-dynamic';
@@ -91,9 +91,15 @@ export default async function PersonPage({ params }: { params: { id: string } })
     : null;
 
   const nameLower = person.name.toLowerCase();
-  const personMemories = ((memoriesData ?? []) as Array<{ id: string; layer: string; content: string; importance: number; created_at: string }>)
+  const allMemories = (memoriesData ?? []) as Array<{ id: string; layer: string; content: string; importance: number; created_at: string }>;
+  const personMemories = allMemories
     .filter(m => m.content.toLowerCase().includes(nameLower))
     .slice(0, 12);
+
+  // Extract work history memory created by the screenshot engine
+  const workHistoryPrefix = `Historial laboral de ${person.name}`;
+  const workHistoryMem = allMemories.find(m => m.content.startsWith(workHistoryPrefix));
+  const workHistoryText = workHistoryMem?.content ?? null;
 
   const avatarColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
   const avatarBg = avatarColors[person.name.charCodeAt(0) % avatarColors.length] ?? '#6366f1';
@@ -164,21 +170,22 @@ export default async function PersonPage({ params }: { params: { id: string } })
             </div>
           )}
 
-          {/* Notes */}
-          {person.notes && (
-            <div style={card}>
-              <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 600, color: '#e2e8f0' }}>Notas</h3>
-              <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.7 }}>{person.notes}</p>
-            </div>
-          )}
-
-          {/* Extra fields: birthday, anniversary, social links */}
-          <PersonExtraFieldsEditor
-            personId={person.id}
-            birthday={person.birthday ?? null}
-            anniversary={person.anniversary ?? null}
-            instagramUrl={person.instagram_url ?? null}
-            linkedinUrl={person.linkedin_url ?? null}
+          {/* Structured profile cards */}
+          <PersonProfileCards
+            person={{
+              id:            person.id,
+              role:          person.role          ?? null,
+              organization:  person.organization  ?? null,
+              location:      person.location      ?? null,
+              education:     person.education     ?? null,
+              linkedin_url:  person.linkedin_url  ?? null,
+              instagram_url: person.instagram_url ?? null,
+              birthday:      person.birthday      ?? null,
+              anniversary:   person.anniversary   ?? null,
+              notes:         person.notes         ?? null,
+              relationship_type: person.relationship_type,
+            }}
+            workHistoryText={workHistoryText}
           />
 
           {/* Register interaction */}

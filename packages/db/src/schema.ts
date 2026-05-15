@@ -103,6 +103,8 @@ export interface DbPerson {
   relationship_type: PersonRelationshipType;
   birthday: string | null;
   anniversary: string | null;
+  location: string | null;
+  education: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -126,7 +128,7 @@ export interface DbRelationship {
 export type InsertPerson = Pick<DbPerson, 'user_id' | 'name'> &
   Partial<Pick<DbPerson, 'email' | 'phone' | 'organization' | 'role' |
     'linkedin_url' | 'instagram_url' | 'avatar_url' | 'notes' | 'tags' | 'language' |
-    'relationship_type' | 'birthday' | 'anniversary'>>;
+    'relationship_type' | 'birthday' | 'anniversary' | 'location' | 'education'>>;
 
 export type InsertRelationship = Pick<DbRelationship, 'user_id' | 'person_id'> &
   Partial<Pick<DbRelationship, 'strength' | 'reciprocity' | 'trust_score' |
