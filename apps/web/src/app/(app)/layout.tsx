@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import Sidebar from '@/components/Sidebar';
-import PostHogProvider from '@/components/PostHogProvider';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getAuthUser();
@@ -16,7 +15,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <PostHogProvider userId={user.id} userEmail={user.email ?? undefined} />
       <Sidebar userEmail={user.email ?? ''} unreadCount={count ?? 0} />
       <main style={{ flex: 1, padding: '32px 40px', overflowY: 'auto' }}>
         {children}

@@ -25,8 +25,7 @@
         "EMAIL_FROM",
         "UPSTASH_REDIS_REST_URL",
         "UPSTASH_REDIS_REST_TOKEN",
-        "NEXT_PUBLIC_POSTHOG_KEY",
-        "POSTHOG_KEY"
+        "NEXT_PUBLIC_GA4_MEASUREMENT_ID"
       ]
     },
     "dev": {

@@ -5,21 +5,10 @@ jest.mock('@sir/db', () => ({
   getSupabaseClient: () => ({ from: mockFrom }),
 }));
 
-const mockCapture  = jest.fn();
-const mockShutdown = jest.fn(() => Promise.resolve());
-jest.mock('posthog-node', () => ({
-  PostHog: jest.fn().mockImplementation(() => ({
-    capture:  mockCapture,
-    shutdown: mockShutdown,
-  })),
-}));
-
 import { EVENTS, trackServerEvent } from '../index';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  delete process.env['POSTHOG_KEY'];
-  delete process.env['NEXT_PUBLIC_POSTHOG_KEY'];
 });
 
 // ─── EVENTS ──────────────────────────────────────────────────────────────────
@@ -68,25 +57,17 @@ describe('trackServerEvent', () => {
     });
   });
 
-  it('does not throw when PostHog key is absent', () => {
+  it('does not throw', () => {
     expect(() => trackServerEvent('user-1', 'test_event', { x: 1 })).not.toThrow();
   });
 
-  it('instantiates PostHog client when key is present', () => {
-    const { PostHog } = jest.requireMock<{ PostHog: jest.Mock }>('posthog-node');
-    process.env['POSTHOG_KEY'] = 'phc_test_key';
+  it('writes a typed EVENTS constant correctly', async () => {
     trackServerEvent('user-2', EVENTS.PERSON_CREATED, { relationship_type: 'personal' });
-    expect(PostHog).toHaveBeenCalledWith('phc_test_key', expect.objectContaining({ host: expect.any(String) }));
-    expect(mockCapture).toHaveBeenCalledWith(expect.objectContaining({
-      distinctId: 'user-2',
-      event: EVENTS.PERSON_CREATED,
-    }));
-  });
-
-  it('accepts NEXT_PUBLIC_POSTHOG_KEY as fallback', () => {
-    const { PostHog } = jest.requireMock<{ PostHog: jest.Mock }>('posthog-node');
-    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_public_key';
-    trackServerEvent('user-3', 'fallback_test');
-    expect(PostHog).toHaveBeenCalledWith('phc_public_key', expect.any(Object));
+    await new Promise(r => setImmediate(r));
+    expect(mockInsert).toHaveBeenCalledWith({
+      user_id:    'user-2',
+      event_name: 'person_created',
+      properties: { relationship_type: 'personal' },
+    });
   });
 });
