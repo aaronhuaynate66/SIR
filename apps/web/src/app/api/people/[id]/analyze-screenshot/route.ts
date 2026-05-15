@@ -1,4 +1,5 @@
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
+import { trackAIUsage } from '@sir/ai';
 import type { WorkHistoryEntry, CycleData } from '@sir/db';
 
 export const runtime = 'nodejs';
@@ -136,6 +137,14 @@ export async function POST(
           { type: 'text', text: 'Extract all contact information from this screenshot.' },
         ],
       }],
+    });
+
+    trackAIUsage({
+      userId:   authUser.id,
+      feature:  'screenshot',
+      model:    'claude-sonnet-4-6',
+      tokensIn:  msg.usage.input_tokens,
+      tokensOut: msg.usage.output_tokens,
     });
 
     const raw   = msg.content[0]?.type === 'text' ? msg.content[0].text.trim() : '{}';

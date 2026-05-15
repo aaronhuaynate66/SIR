@@ -151,7 +151,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const outputTokens = message.usage.output_tokens;
     const costUsd = inputTokens * INPUT_PRICE + outputTokens * OUTPUT_PRICE;
 
-    costTracker.track(user.id, 'claude-sonnet-4-6', inputTokens, outputTokens).catch(() => undefined);
+    costTracker.track(user.id, 'claude-sonnet-4-6', inputTokens, outputTokens, 'briefing_executive').catch(() => undefined);
     trackEvent(user.id, 'briefing_viewed', { type: 'executive', inputTokens, outputTokens, costUsd }).catch(() => undefined);
 
     return NextResponse.json({ content, tokens: inputTokens + outputTokens, costUsd });

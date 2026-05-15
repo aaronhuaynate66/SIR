@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: '/signals',   label: 'Señales'   },
   { href: '/analytics', label: 'Analytics' },
   { href: '/costs',     label: 'Costos AI'  },
+  { href: '/ai-usage',  label: 'AI Detalle' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

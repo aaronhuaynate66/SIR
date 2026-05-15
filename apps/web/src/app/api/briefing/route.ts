@@ -349,7 +349,7 @@ export async function POST(req: Request): Promise<Response> {
             // non-critical
           }
 
-          costTracker.track(userId, 'claude-sonnet-4-6', inputTokens, outputTokens).catch(() => undefined);
+          costTracker.track(userId, 'claude-sonnet-4-6', inputTokens, outputTokens, 'briefing').catch(() => undefined);
           trackServerEvent(userId, EVENTS.BRIEFING_GENERATED, {
             person_id:     personId,
             briefing_id:   briefingId,

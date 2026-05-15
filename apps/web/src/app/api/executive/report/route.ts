@@ -147,7 +147,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const inputTokens  = message.usage.input_tokens;
     const outputTokens = message.usage.output_tokens;
     const costUsd = inputTokens * INPUT_PRICE + outputTokens * OUTPUT_PRICE;
-    costTracker.track(user.id, 'claude-sonnet-4-6', inputTokens, outputTokens).catch(() => undefined);
+    costTracker.track(user.id, 'claude-sonnet-4-6', inputTokens, outputTokens, 'executive_report').catch(() => undefined);
     return NextResponse.json({ content, tokens: inputTokens + outputTokens, costUsd });
   } catch {
     return NextResponse.json({ content: buildFallback(), tokens: 0, costUsd: 0 });

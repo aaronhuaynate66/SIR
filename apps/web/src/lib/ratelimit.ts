@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { costTracker } from '@sir/ai';
 
 interface LimitResult { success: boolean }
 type Limiter = { limit: (id: string) => Promise<LimitResult> };
@@ -68,6 +69,15 @@ export async function checkAIHourlyLimit(
   } catch {
     return null;
   }
+}
+
+// ── AI spend budget per plan (delegates to CostTracker.checkBudget) ──────────
+
+export async function checkAIBudget(
+  userId: string,
+  db: SupabaseClient,
+): Promise<Response | null> {
+  return costTracker.checkBudget(userId, db);
 }
 
 // ── Briefing plan limits (free: 5 total | individual/pro: 50/month) ───────────
