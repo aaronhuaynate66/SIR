@@ -14,8 +14,8 @@ interface NavItem {
 
 function buildNav(unreadCount: number): NavItem[] {
   return [
-    { href: '/inicio',        label: 'Dashboard', icon: '⊞' },
-    { href: '/red',           label: 'Personas',  icon: '◎' },
+    { href: '/inicio',        label: 'Inicio',    icon: '⊞' },
+    { href: '/red',           label: 'Red',       icon: '◎' },
     { href: '/grafo',         label: 'Grafo',     icon: '◯' },
     { href: '/senales',       label: 'Señales',   icon: '◆' },
     { href: '/memorias',      label: 'Memorias',  icon: '◈' },
