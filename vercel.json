@@ -1,5 +1,16 @@
 {
-  "buildCommand": "npx turbo build --filter=@sir/web...",
+  "framework": "nextjs",
+  "installCommand": "npm install -g pnpm@9.0.0 && pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm turbo build --filter=@sir/web...",
   "outputDirectory": "apps/web/.next",
-  "framework": "nextjs"
+  "crons": [
+    {
+      "path": "/api/notifications/engine",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/neo4j/sync",
+      "schedule": "0 2 * * *"
+    }
+  ]
 }
