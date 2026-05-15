@@ -1,17 +1,14 @@
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
+import type { WorkHistoryEntry } from '@sir/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+export type { WorkHistoryEntry };
+
 interface AnalyzeBody {
   image:    string; // base64
   mimeType: string; // e.g. "image/jpeg"
-}
-
-export interface WorkHistoryEntry {
-  role:    string;
-  company: string;
-  period:  string;
 }
 
 export interface AnalysisResult {
@@ -73,7 +70,8 @@ Rules:
 - birthday/anniversary: only if explicitly shown. Format YYYY-MM-DD; use 2000 as year if only month/day visible.
 - linkedin_url: build from username if visible (https://linkedin.com/in/username)
 - instagram_url: build from handle if visible (https://instagram.com/handle)
-- Return ONLY the JSON object.`;
+- Return ONLY the JSON object.
+- IMPORTANT: Always respond in Spanish. All text fields including notes, summaries, descriptions, role titles, and period labels must be in Spanish.`;
 
 export async function POST(
   req: Request,

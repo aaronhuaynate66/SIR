@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { updatePersonExtraFieldsAction } from '@/app/(app)/actions';
+import type { WorkHistoryEntry } from '@sir/db';
 
 export interface PersonCardData {
   id:            string;
@@ -14,12 +15,12 @@ export interface PersonCardData {
   birthday:      string | null;
   anniversary:   string | null;
   notes:         string | null;
+  work_history:  WorkHistoryEntry[] | null;
   relationship_type: string;
 }
 
 interface Props {
-  person:         PersonCardData;
-  workHistoryText: string | null;
+  person: PersonCardData;
 }
 
 type CardKey = 'professional' | 'social' | 'dates' | 'notes';
@@ -108,7 +109,7 @@ function Card({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PersonProfileCards({ person, workHistoryText }: Props) {
+export default function PersonProfileCards({ person }: Props) {
   const [editingCard, setEditingCard] = useState<CardKey | null>(null);
   const [isPending, start] = useTransition();
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -158,7 +159,8 @@ export default function PersonProfileCards({ person, workHistoryText }: Props) {
   }
 
   // Visibility checks
-  const hasProfessional = !!(person.role || person.organization || person.location || person.education || workHistoryText);
+  const workEntries     = person.work_history ?? [];
+  const hasProfessional = !!(person.role || person.organization || person.location || person.education || workEntries.length > 0);
   const hasSocial       = !!(person.linkedin_url || person.instagram_url);
   const hasDates        = !!(person.birthday || person.anniversary);
   const hasNotes        = !!person.notes;
@@ -166,12 +168,8 @@ export default function PersonProfileCards({ person, workHistoryText }: Props) {
   const daysBirthday    = person.birthday    ? daysUntil(person.birthday)    : null;
   const daysAnniversary = person.anniversary ? daysUntil(person.anniversary) : null;
 
-  // Work history lines (strip "Historial laboral de X:\n" prefix)
-  const workLines = workHistoryText
-    ? workHistoryText.replace(/^Historial laboral de[^\n]+\n/, '').split('\n').filter(Boolean)
-    : [];
   const [showAllWork, setShowAllWork] = useState(false);
-  const visibleWork = showAllWork ? workLines : workLines.slice(0, 2);
+  const visibleWork = showAllWork ? workEntries : workEntries.slice(0, 2);
 
   if (!hasProfessional && !hasSocial && !hasDates && !hasNotes) return null;
 
@@ -205,27 +203,25 @@ export default function PersonProfileCards({ person, workHistoryText }: Props) {
             )}
             {prof.location && <DataRow icon="📍" value={prof.location} />}
             {prof.education && <DataRow icon="🎓" value={prof.education} />}
-            {workLines.length > 0 && (
+            {workEntries.length > 0 && (
               <div style={{ marginTop: 6 }}>
                 <span style={{ fontSize: 11, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Experiencia
                 </span>
-                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {visibleWork.map((line, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                      <span style={{ color: '#334155', fontSize: 12, lineHeight: 1.6, flexShrink: 0 }}>•</span>
-                      <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
-                        {line.replace(/^•\s*/, '')}
-                      </span>
+                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {visibleWork.map((entry, i) => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <span style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 500 }}>{entry.role}</span>
+                      <span style={{ fontSize: 11, color: '#64748b' }}>{entry.company} · {entry.period}</span>
                     </div>
                   ))}
                 </div>
-                {workLines.length > 2 && (
+                {workEntries.length > 2 && (
                   <button
                     onClick={() => setShowAllWork(s => !s)}
-                    style={{ marginTop: 6, background: 'none', border: 'none', color: '#818cf8', fontSize: 12, cursor: 'pointer', padding: 0 }}
+                    style={{ marginTop: 8, background: 'none', border: 'none', color: '#818cf8', fontSize: 12, cursor: 'pointer', padding: 0 }}
                   >
-                    {showAllWork ? 'Ocultar' : `Ver historial (${workLines.length - 2} más)`}
+                    {showAllWork ? 'Ocultar historial' : `Ver historial laboral (${workEntries.length - 2} más)`}
                   </button>
                 )}
               </div>

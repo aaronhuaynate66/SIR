@@ -162,7 +162,7 @@ export async function confirmScreenshotAction(
     const db = getServiceClient();
 
     // Build update payload — only non-null confirmed fields
-    const update: Record<string, string | null> = {};
+    const update: Record<string, unknown> = {};
     if (confirmedData.linkedin_url  !== undefined) update['linkedin_url']  = confirmedData.linkedin_url  ?? null;
     if (confirmedData.instagram_url !== undefined) update['instagram_url'] = confirmedData.instagram_url ?? null;
     if (confirmedData.birthday      !== undefined) update['birthday']      = confirmedData.birthday      ?? null;
@@ -171,10 +171,10 @@ export async function confirmScreenshotAction(
     if (confirmedData.role          !== undefined && confirmedData.role)          update['role']         = confirmedData.role;
     if (confirmedData.email         !== undefined && confirmedData.email)         update['email']        = confirmedData.email;
     if (confirmedData.phone         !== undefined && confirmedData.phone)         update['phone']        = confirmedData.phone;
-
-    if (confirmedData.notes     !== undefined && confirmedData.notes)     update['notes']     = confirmedData.notes;
-    if (confirmedData.location  !== undefined && confirmedData.location)  update['location']  = confirmedData.location;
-    if (confirmedData.education !== undefined && confirmedData.education) update['education'] = confirmedData.education;
+    if (confirmedData.notes         !== undefined && confirmedData.notes)         update['notes']        = confirmedData.notes;
+    if (confirmedData.location      !== undefined && confirmedData.location)      update['location']     = confirmedData.location;
+    if (confirmedData.education     !== undefined && confirmedData.education)     update['education']    = confirmedData.education;
+    if (confirmedData.work_history?.length)  update['work_history'] = confirmedData.work_history;
 
     if (Object.keys(update).length > 0) {
       const { error } = await db

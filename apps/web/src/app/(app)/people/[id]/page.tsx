@@ -96,10 +96,6 @@ export default async function PersonPage({ params }: { params: { id: string } })
     .filter(m => m.content.toLowerCase().includes(nameLower))
     .slice(0, 12);
 
-  // Extract work history memory created by the screenshot engine
-  const workHistoryPrefix = `Historial laboral de ${person.name}`;
-  const workHistoryMem = allMemories.find(m => m.content.startsWith(workHistoryPrefix));
-  const workHistoryText = workHistoryMem?.content ?? null;
 
   const avatarColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
   const avatarBg = avatarColors[person.name.charCodeAt(0) % avatarColors.length] ?? '#6366f1';
@@ -183,9 +179,9 @@ export default async function PersonPage({ params }: { params: { id: string } })
               birthday:      person.birthday      ?? null,
               anniversary:   person.anniversary   ?? null,
               notes:         person.notes         ?? null,
+              work_history:  person.work_history  ?? null,
               relationship_type: person.relationship_type,
             }}
-            workHistoryText={workHistoryText}
           />
 
           {/* Register interaction */}
