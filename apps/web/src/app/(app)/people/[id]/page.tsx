@@ -49,13 +49,79 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
+// ─── Smart Summary helpers ────────────────────────────────────────────────────
+
+function relativeDate(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days === 0) return 'hoy';
+  if (days === 1) return 'ayer';
+  if (days < 7)  return `hace ${days} días`;
+  if (days < 30) return `hace ${Math.floor(days / 7)} semanas`;
+  return `hace ${Math.floor(days / 30)} meses`;
+}
+
+function daysUntilAnnual(s: string): number {
+  const d = new Date(s + 'T00:00:00');
+  let next = new Date(new Date().getFullYear(), d.getMonth(), d.getDate());
+  if (next.getTime() < Date.now() - 86_400_000)
+    next = new Date(next.getFullYear() + 1, d.getMonth(), d.getDate());
+  return Math.ceil((next.getTime() - Date.now()) / 86_400_000);
+}
+
+function buildSummaryLines(
+  person: DbPerson,
+  rel: DbRelationship | null,
+  lastSignalType: string | null,
+): string[] {
+  const lines: string[] = [];
+
+  // Cycle phase
+  if (person.cycle_data?.last_period_start) {
+    const start = new Date(person.cycle_data.last_period_start + 'T00:00:00');
+    const raw = Math.floor((Date.now() - start.getTime()) / 86_400_000) + 1;
+    if (raw >= 1) {
+      const day = ((raw - 1) % 28) + 1;
+      const phase = day <= 5 ? 'Menstrual' : day <= 13 ? 'Folicular' : day <= 17 ? 'Ovulación' : 'Lútea';
+      lines.push(`🌸 En fase ${phase} (día ${day}), próximo período en ~${29 - day} días`);
+    }
+  }
+
+  // Upcoming dates within 30 days
+  const upcoming: string[] = [];
+  if (person.birthday) {
+    const d = daysUntilAnnual(person.birthday);
+    if (d <= 30) upcoming.push(d === 0 ? '🎂 ¡Cumpleaños hoy!' : `🎂 Cumpleaños en ${d} días`);
+  }
+  if (person.anniversary) {
+    const d = daysUntilAnnual(person.anniversary);
+    if (d <= 30) upcoming.push(d === 0 ? '💑 ¡Aniversario hoy!' : `💑 Aniversario en ${d} días`);
+  }
+  if (upcoming.length) lines.push(upcoming.join(' · '));
+
+  // Last interaction
+  if (rel?.last_contact_at) {
+    lines.push(`💬 Última interacción: ${relativeDate(rel.last_contact_at)}`);
+  } else {
+    lines.push('💬 Sin interacciones registradas aún');
+  }
+
+  // Recent signal (only if room)
+  if (lastSignalType && lines.length < 3) {
+    lines.push(`📡 Señal reciente: ${lastSignalType}`);
+  }
+
+  return lines.slice(0, 3);
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default async function PersonPage({ params }: { params: { id: string } }) {
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
   const db = getServiceClient();
 
-  const [{ data: personData }, { data: relData }, { data: memoriesData }, { data: briefingsData }] = await Promise.all([
+  const [{ data: personData }, { data: relData }, { data: memoriesData }, { data: briefingsData }, { data: signalData }] = await Promise.all([
     db.from('people')
       .select('*')
       .eq('id', params.id)
@@ -78,6 +144,12 @@ export default async function PersonPage({ params }: { params: { id: string } })
       .eq('person_id', params.id)
       .order('created_at', { ascending: false })
       .limit(5),
+    db.from('signals')
+      .select('type, created_at')
+      .eq('user_id', user.id)
+      .contains('payload', { person_id: params.id })
+      .order('created_at', { ascending: false })
+      .limit(1),
   ]);
 
   if (!personData) notFound();
@@ -85,6 +157,7 @@ export default async function PersonPage({ params }: { params: { id: string } })
   const person   = personData  as DbPerson;
   const rel      = relData     as DbRelationship | null;
   const briefings = (briefingsData ?? []) as BriefingRecord[];
+  const lastSignalType = (signalData?.[0] as { type: string } | undefined)?.type ?? null;
 
   const relScore = rel
     ? Math.round(rel.strength * 0.4 + rel.reciprocity * 0.3 + rel.trust_score * 100 * 0.3)
@@ -96,6 +169,7 @@ export default async function PersonPage({ params }: { params: { id: string } })
     .filter(m => m.content.toLowerCase().includes(nameLower))
     .slice(0, 12);
 
+  const summaryLines = buildSummaryLines(person, rel, lastSignalType);
 
   const avatarColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
   const avatarBg = avatarColors[person.name.charCodeAt(0) % avatarColors.length] ?? '#6366f1';
@@ -104,7 +178,7 @@ export default async function PersonPage({ params }: { params: { id: string } })
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 16 }}>
         <div style={{
           width: 64, height: 64, borderRadius: '50%', flexShrink: 0,
           background: avatarBg,
@@ -159,6 +233,24 @@ export default async function PersonPage({ params }: { params: { id: string } })
         </div>
       </div>
 
+      {/* Smart Summary */}
+      <div style={{
+        background: '#1a1d27',
+        border: '1px solid #2a2d3e',
+        borderRadius: 10,
+        padding: '12px 16px',
+        marginBottom: 28,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}>
+        {summaryLines.map((line, i) => (
+          <p key={i} style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
+            {line}
+          </p>
+        ))}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         {/* Left column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -199,6 +291,9 @@ export default async function PersonPage({ params }: { params: { id: string } })
               emotional_state:       person.emotional_state       ?? null,
               love_language:         person.love_language         ?? null,
               relationship_patterns: person.relationship_patterns ?? null,
+              notes_professional:    person.notes_professional    ?? null,
+              notes_social:          person.notes_social          ?? null,
+              notes_personal:        person.notes_personal        ?? null,
               relationship_type: person.relationship_type,
             }}
           />

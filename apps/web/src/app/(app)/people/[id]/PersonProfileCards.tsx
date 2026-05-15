@@ -27,6 +27,9 @@ export interface PersonCardData {
   emotional_state:       string | null;
   love_language:         string | null;
   relationship_patterns: string | null;
+  notes_professional:    string | null;
+  notes_social:          string | null;
+  notes_personal:        string | null;
   relationship_type:     string;
 }
 
@@ -264,7 +267,7 @@ function Card({ title, editing, onEdit, onSave, onCancel, isPending, children, e
 
 export default function PersonProfileCards({ person }: { person: PersonCardData }) {
   const [editingCard, setEditingCard] = useState<
-    'professional' | 'social' | 'dates' | 'notes' | 'cycle' | null
+    'professional' | 'social' | 'dates' | 'notes_pro' | 'notes_soc' | 'notes_pers' | 'cycle' | null
   >(null);
   const [isPending, start] = useTransition();
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -280,7 +283,9 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
   const [datesEdit, setDatesEdit] = useState({
     birthday: person.birthday ?? '', anniversary: person.anniversary ?? '',
   });
-  const [notesEdit, setNotesEdit] = useState(person.notes ?? '');
+  const [notesPro,  setNotesPro]  = useState(person.notes_professional ?? '');
+  const [notesSoc,  setNotesSoc]  = useState(person.notes_social       ?? '');
+  const [notesPers, setNotesPers] = useState(person.notes_personal     ?? '');
   const [cycleEdit, setCycleEdit] = useState({
     last_period_start:     person.cycle_data?.last_period_start ?? '',
     cycle_notes:           person.cycle_data?.notes             ?? '',
@@ -296,12 +301,17 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
   )?.[today] ?? {};
   const [symptoms, setSymptoms] = useState<Record<string, boolean>>(storedSyms);
 
+  // showAllWork must be before early return (React hooks rule)
+  const [showAllWork, setShowAllWork] = useState(false);
+
   function startEdit(card: typeof editingCard) {
     if (card === 'professional') setProfEdit({ role: person.role ?? '', organization: person.organization ?? '', location: person.location ?? '', education: person.education ?? '' });
-    if (card === 'social')  setSocialEdit({ linkedin_url: person.linkedin_url ?? '', instagram_url: person.instagram_url ?? '' });
-    if (card === 'dates')   setDatesEdit({ birthday: person.birthday ?? '', anniversary: person.anniversary ?? '' });
-    if (card === 'notes')   setNotesEdit(person.notes ?? '');
-    if (card === 'cycle')   setCycleEdit({ last_period_start: person.cycle_data?.last_period_start ?? '', cycle_notes: person.cycle_data?.notes ?? '', emotional_state: person.emotional_state ?? '', love_language: person.love_language ?? '', relationship_patterns: person.relationship_patterns ?? '' });
+    if (card === 'social')     setSocialEdit({ linkedin_url: person.linkedin_url ?? '', instagram_url: person.instagram_url ?? '' });
+    if (card === 'dates')      setDatesEdit({ birthday: person.birthday ?? '', anniversary: person.anniversary ?? '' });
+    if (card === 'notes_pro')  setNotesPro(person.notes_professional ?? '');
+    if (card === 'notes_soc')  setNotesSoc(person.notes_social       ?? '');
+    if (card === 'notes_pers') setNotesPers(person.notes_personal     ?? '');
+    if (card === 'cycle')      setCycleEdit({ last_period_start: person.cycle_data?.last_period_start ?? '', cycle_notes: person.cycle_data?.notes ?? '', emotional_state: person.emotional_state ?? '', love_language: person.love_language ?? '', relationship_patterns: person.relationship_patterns ?? '' });
     setErrMsg(null);
     setEditingCard(card);
   }
@@ -345,14 +355,14 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
 
   // Visibility
   const workEntries     = person.work_history ?? [];
+  const visibleWork     = showAllWork ? workEntries : workEntries.slice(0, 2);
   const hasProfessional = !!(person.role || person.organization || person.location || person.education || workEntries.length);
   const hasSocial       = !!(person.linkedin_url || person.instagram_url);
   const hasDates        = !!(person.birthday || person.anniversary);
-  const hasNotes        = !!person.notes;
+  const hasNotesPro     = !!person.notes_professional;
+  const hasNotesSoc     = !!person.notes_social;
+  const hasNotesPers    = !!person.notes_personal;
   const isPrivate       = person.relationship_type === 'personal' || person.relationship_type === 'family';
-  const showContext     = isPrivate && !!(
-    person.cycle_data || person.emotional_state || person.love_language || person.relationship_patterns
-  );
 
   const cycleInfo = person.cycle_data?.last_period_start
     ? getCycleInfo(person.cycle_data.last_period_start)
@@ -360,22 +370,18 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
 
   const llLabel = LOVE_LANGS.find(l => l.v === (person.love_language ?? cycleEdit.love_language))?.l ?? null;
 
-  // Derived date values
+  // Derived display values
   const prof   = editingCard === 'professional' ? profEdit   : { role: person.role ?? '', organization: person.organization ?? '', location: person.location ?? '', education: person.education ?? '' };
   const social = editingCard === 'social'       ? socialEdit : { linkedin_url: person.linkedin_url ?? '', instagram_url: person.instagram_url ?? '' };
   const dates  = editingCard === 'dates'        ? datesEdit  : { birthday: person.birthday ?? '', anniversary: person.anniversary ?? '' };
-  const notes  = editingCard === 'notes'        ? notesEdit  : (person.notes ?? '');
 
-  const [showAllWork, setShowAllWork] = useState(false);
-  const visibleWork = showAllWork ? workEntries : workEntries.slice(0, 2);
-
-  if (!hasProfessional && !hasSocial && !hasDates && !hasNotes && !showContext) return null;
+  if (!hasProfessional && !hasSocial && !hasDates && !hasNotesPro && !hasNotesSoc && !hasNotesPers && !isPrivate) return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {errMsg && <p style={{ margin: 0, fontSize: 12, color: '#f87171' }}>{errMsg}</p>}
 
-      {/* ── 1° Contexto privado ── */}
+      {/* ── 1° Contexto privado (personal/family only) ── */}
       {isPrivate && (
         <Card
           title="Contexto privado"
@@ -421,31 +427,19 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
             </div>
           }
         >
-          {/* View mode */}
           {cycleInfo ? (
             <>
-              {/* Wheel */}
               <CycleWheel day={cycleInfo.day} />
-
-              {/* Phase info row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 4px 0' }}>
                 <div>
-                  <span style={{ fontSize: 28, fontWeight: 800, color: '#e2e8f0', lineHeight: 1 }}>
-                    {cycleInfo.day}
-                  </span>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: '#e2e8f0', lineHeight: 1 }}>{cycleInfo.day}</span>
                   <span style={{ fontSize: 12, color: '#64748b', marginLeft: 6 }}>días del ciclo</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ margin: 0, fontSize: 11, color: '#475569' }}>
-                    Próximo período
-                  </p>
-                  <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
-                    ~{cycleInfo.nextIn} días
-                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: '#475569' }}>Próximo período</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>~{cycleInfo.nextIn} días</p>
                 </div>
               </div>
-
-              {/* Recommendation */}
               {RECS[cycleInfo.name] && (
                 <div style={{
                   margin: '12px 0 4px',
@@ -467,7 +461,7 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
             </p>
           )}
 
-          {/* Symptom quick-log — always visible */}
+          {/* Symptom quick-log */}
           <div style={{ marginTop: 14 }}>
             <p style={{ margin: '0 0 8px', fontSize: 10, color: '#334155', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Registro rápido
@@ -497,15 +491,12 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
             </div>
           </div>
 
-          {/* Context fields display */}
           {(person.love_language || person.emotional_state || person.relationship_patterns) && (
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {llLabel && (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 12, color: '#475569', minWidth: 80 }}>Lenguaje</span>
-                  <span style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 500 }}>
-                    {llLabel}
-                  </span>
+                  <span style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 500 }}>{llLabel}</span>
                 </div>
               )}
               {person.emotional_state && (
@@ -527,27 +518,70 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
         </Card>
       )}
 
-      {/* ── 2° Notas personales ── */}
-      {hasNotes && (
+      {/* ── 2° Vida profesional ── */}
+      {hasNotesPro && (
         <Card
-          title="Notas personales"
-          editing={editingCard === 'notes'}
-          onEdit={() => startEdit('notes')}
-          onSave={() => saveFields({ notes: notesEdit })}
+          title="💼 Vida profesional"
+          editing={editingCard === 'notes_pro'}
+          onEdit={() => startEdit('notes_pro')}
+          onSave={() => saveFields({ notes_professional: notesPro })}
           onCancel={() => setEditingCard(null)}
           isPending={isPending}
           editChildren={
-            <textarea value={notesEdit} onChange={e => setNotesEdit(e.target.value)}
-              rows={4} style={{ ...IS, resize: 'vertical' as const, fontFamily: 'inherit' }} />
+            <textarea value={notesPro} onChange={e => setNotesPro(e.target.value)}
+              rows={5} placeholder="Trabajo, proyectos, logros, ambiciones…"
+              style={{ ...IS, resize: 'vertical' as const, fontFamily: 'inherit' }} />
           }
         >
           <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-            {notes}
+            {person.notes_professional}
           </p>
         </Card>
       )}
 
-      {/* ── Fechas importantes ── */}
+      {/* ── 3° Vida social ── */}
+      {hasNotesSoc && (
+        <Card
+          title="🌐 Vida social"
+          editing={editingCard === 'notes_soc'}
+          onEdit={() => startEdit('notes_soc')}
+          onSave={() => saveFields({ notes_social: notesSoc })}
+          onCancel={() => setEditingCard(null)}
+          isPending={isPending}
+          editChildren={
+            <textarea value={notesSoc} onChange={e => setNotesSoc(e.target.value)}
+              rows={5} placeholder="Redes sociales, intereses públicos, comunidad…"
+              style={{ ...IS, resize: 'vertical' as const, fontFamily: 'inherit' }} />
+          }
+        >
+          <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            {person.notes_social}
+          </p>
+        </Card>
+      )}
+
+      {/* ── 4° Lo personal ── */}
+      {hasNotesPers && (
+        <Card
+          title="💙 Lo personal"
+          editing={editingCard === 'notes_pers'}
+          onEdit={() => startEdit('notes_pers')}
+          onSave={() => saveFields({ notes_personal: notesPers })}
+          onCancel={() => setEditingCard(null)}
+          isPending={isPending}
+          editChildren={
+            <textarea value={notesPers} onChange={e => setNotesPers(e.target.value)}
+              rows={5} placeholder="Conversaciones privadas, estado emocional general…"
+              style={{ ...IS, resize: 'vertical' as const, fontFamily: 'inherit' }} />
+          }
+        >
+          <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            {person.notes_personal}
+          </p>
+        </Card>
+      )}
+
+      {/* ── 5° Fechas importantes ── */}
       {hasDates && (
         <Card
           title="Fechas importantes"
@@ -578,7 +612,7 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
         </Card>
       )}
 
-      {/* ── 3° Perfil profesional (collapsed) ── */}
+      {/* ── 6° Perfil profesional (collapsed) ── */}
       {hasProfessional && (
         <Card
           title="Perfil profesional"
@@ -629,7 +663,7 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
         </Card>
       )}
 
-      {/* ── 4° Redes sociales ── */}
+      {/* ── 7° Redes sociales ── */}
       {hasSocial && (
         <Card
           title="Redes sociales"

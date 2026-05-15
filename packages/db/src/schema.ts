@@ -123,6 +123,9 @@ export interface DbPerson {
   emotional_state:       string | null;
   love_language:         string | null;
   relationship_patterns: string | null;
+  notes_professional:    string | null;
+  notes_social:          string | null;
+  notes_personal:        string | null;
   created_at: string;
   updated_at: string;
 }
@@ -148,7 +151,8 @@ export type InsertPerson = Pick<DbPerson, 'user_id' | 'name'> &
     'linkedin_url' | 'instagram_url' | 'avatar_url' | 'notes' | 'tags' | 'language' |
     'relationship_type' | 'birthday' | 'anniversary' | 'location' | 'education' |
     'work_history' | 'cycle_data' | 'sensitive_context' |
-    'emotional_state' | 'love_language' | 'relationship_patterns'>>;
+    'emotional_state' | 'love_language' | 'relationship_patterns' |
+    'notes_professional' | 'notes_social' | 'notes_personal'>>;
 
 export type InsertRelationship = Pick<DbRelationship, 'user_id' | 'person_id'> &
   Partial<Pick<DbRelationship, 'strength' | 'reciprocity' | 'trust_score' |

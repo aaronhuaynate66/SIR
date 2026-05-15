@@ -66,6 +66,9 @@ const mockPerson: DbPerson = {
   emotional_state:       null,
   love_language:         null,
   relationship_patterns: null,
+  notes_professional:    null,
+  notes_social:          null,
+  notes_personal:        null,
   created_at:    '2026-05-14T00:00:00Z',
   updated_at:    '2026-05-14T00:00:00Z',
 };

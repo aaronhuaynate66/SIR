@@ -24,7 +24,8 @@ export async function updatePerson(
     'name' | 'email' | 'phone' | 'organization' | 'role' |
     'linkedin_url' | 'instagram_url' | 'avatar_url' | 'notes' | 'tags' | 'language' |
     'relationship_type' | 'birthday' | 'anniversary' | 'location' | 'education' |
-    'work_history' | 'cycle_data' | 'sensitive_context'
+    'work_history' | 'cycle_data' | 'sensitive_context' |
+    'notes_professional' | 'notes_social' | 'notes_personal'
   >>
 ): Promise<DbPerson> {
   const { data: person, error } = await getSupabaseClient()

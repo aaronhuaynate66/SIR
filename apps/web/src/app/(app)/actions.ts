@@ -135,6 +135,9 @@ export async function updatePersonExtraFieldsAction(
     emotional_state?:       string | null;
     love_language?:         string | null;
     relationship_patterns?: string | null;
+    notes_professional?:    string | null;
+    notes_social?:          string | null;
+    notes_personal?:        string | null;
   },
 ): Promise<ActionResult> {
   const user = await getAuthUser();
@@ -169,7 +172,7 @@ export async function confirmScreenshotAction(
     // Fetch existing person to merge — never overwrite already-set fields
     const { data: existing } = await db
       .from('people')
-      .select('role, organization, location, education, linkedin_url, instagram_url, birthday, anniversary, notes, work_history, email, phone, cycle_data')
+      .select('role, organization, location, education, linkedin_url, instagram_url, birthday, anniversary, notes, work_history, email, phone, cycle_data, notes_professional, notes_social, notes_personal')
       .eq('id', personId)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -195,10 +198,15 @@ export async function confirmScreenshotAction(
     mergeIfEmpty('email',         confirmedData.email);
     mergeIfEmpty('phone',         confirmedData.phone);
 
-    // Notes: concatenate
+    // Notes: route to split field by screenshot type, fallback to generic notes
     if (confirmedData.notes) {
-      update['notes'] = ep['notes']
-        ? `${ep['notes']}\n\n${confirmedData.notes}`
+      const noteField =
+        result.type === 'linkedin'  ? 'notes_professional' :
+        result.type === 'instagram' ? 'notes_social' :
+        result.type === 'whatsapp'  ? 'notes_personal' :
+        'notes';
+      update[noteField] = (ep[noteField] as string | null)
+        ? `${ep[noteField] as string}\n\n${confirmedData.notes}`
         : confirmedData.notes;
     }
 
