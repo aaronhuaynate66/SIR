@@ -2,9 +2,9 @@
 
 ## Estado general
 Última actualización: 2026-05-15
-Versión en producción: pendiente deploy (feat: relationship type field + filters)
+Versión en producción: `80bddfe` — clue-inspired cycle UI + emotional context first
 
-**Nota 2026-05-15:** `relationship_type` agregado a `people`. 6 tipos: professional, networking, family, personal, strategic, developing. Filtros en /people, badge en cards, editor inline en /people/[id], widget en dashboard, contexto en AI Briefing prompt. Migración: `20260515000001_people_relationship_type.sql`.
+**Nota 2026-05-15 (última sesión):** Módulos 18-20 + rediseño grafo. Screenshot Intelligence Engine (m18), Sensitive Context Engine con SVG cycle wheel estilo Clue (m19), Relationship Type Field 6-tipos (m20). Grafo rediseñado con nodos avatar, badge ciclo, hover cards, BriefingButton en side panel. Migraciones pendientes de aplicar: 000005 (cycle_data/sensitive_context), 000006 (emotional_state/love_language/relationship_patterns).
 
 ## URLs de producción
 - Web: https://sir-web.vercel.app
@@ -13,9 +13,9 @@ Versión en producción: pendiente deploy (feat: relationship type field + filte
 
 ## Progreso general
 ```
-█████████████████████ 17/17 módulos completados (100%)
+████████████████████████ 20/20 módulos completados (100%)
 ```
-✅ Completo: 17 | 🔄 Parcial: 0 | ⬜ Pendiente: 0
+✅ Completo: 20 | 🔄 Parcial: 0 | ⬜ Pendiente: 0
 
 ---
 
@@ -63,14 +63,14 @@ Versión en producción: pendiente deploy (feat: relationship type field + filte
 ### 04 — Relationship Graph Visual
 **Estado:** ✅ Completo
 **Deploy:** ✅ Vercel
-**Commit:** `7cdd8fa` (2026-05-14)
+**Commit:** `7cdd8fa` (2026-05-14) → rediseñado en `80bddfe`+
 **Prompt usado:** Construye la visualización del grafo de relaciones en apps/web con ReactFlow v11. Layout circular con user en centro y personas como nodos periféricos. Color de nodo por relationship_type (family/professional/personal), grosor de arista por strength, animación en relaciones estratégicas. Click en nodo abre side panel con métricas (fuerza, reciprocidad, confianza) y link a perfil. GraphControls con filtro por tipo y slider de fuerza mínima. Sidebar link Grafo entre Personas y Señales.
 **Verificación:**
 - [x] Grafo renderiza con nodos reales (layout circular)
 - [x] Click en nodo muestra side panel con métricas
 - [x] Filtros por tipo de relación y fuerza mínima funcionan
 - [x] Build Next.js sin errores (49.9 kB bundle)
-**Notas:** reactflow@^11, transpilePackages configurado, layout circular con radio dinámico
+**Notas:** reactflow@^11, transpilePackages configurado, layout circular con radio dinámico. Rediseñado 2026-05-15: nodos avatar circulares con initials, badge de fase del ciclo, hover mini-card, edges coloreados por PersonRelationshipType (6 tipos), chip filters, BriefingButton en side panel.
 
 ---
 
@@ -319,6 +319,60 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 - [x] Settings: barra de uso con colores
 - [x] Build 5/5 sin errores
 **Notas:** Cost check fire-and-forget. Bloqueo en briefing route. 3 migraciones SQL pendientes de aplicar (analytics_events, ai_usage, + notification_logs).
+
+---
+
+### 18 — Screenshot Intelligence Engine
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `7830c10` (2026-05-15)
+**Fecha:** 2026-05-15
+**Descripción:** Procesa screenshots de LinkedIn, Instagram y WhatsApp. Extrae datos estructurados con Claude Vision (claude-sonnet-4-6). Modal de confirmación editable con merge warnings (nunca sobreescribe campos existentes). Lógica merge: `mergeIfEmpty()` para campos string, concat para notas, dedup por `role+company` para historial laboral. Crea memorias semánticas (location, education, work_history) y señales automáticas.
+**Archivos clave:** `apps/web/src/app/api/people/[id]/analyze-screenshot/route.ts`, `apps/web/src/app/(app)/people/[id]/ScreenshotAnalyzer.tsx`, `apps/web/src/app/(app)/actions.ts`
+**Verificación:**
+- [x] Claude Vision extrae datos de LinkedIn, Instagram, WhatsApp
+- [x] Modal de confirmación editable con merge warnings
+- [x] Merge strategy: nunca sobreescribe campos existentes
+- [x] Crea memorias semánticas (location, education, work_history)
+- [x] Build Next.js sin errores
+**Notas:** JSON markdown fences stripping antes de `JSON.parse`. WhatsApp extrae además: `conversation_tone`, `emotional_state`, `topics[]`, `last_interaction_quality`, `cycle_data`.
+
+---
+
+### 19 — Sensitive Context Engine
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `80bddfe` (2026-05-15)
+**Fecha:** 2026-05-15
+**Descripción:** Rueda de ciclo menstrual estilo Clue (SVG puro, 28 segmentos, colores por fase: Menstrual/#E8394D, Folicular/#4CAF82, Ovulación/#2ECC71, Lútea/#7C6FCD). Cálculo automático de fase desde `last_period_start`. Recomendación de tono por fase con emoji. Registro rápido de síntomas (Ánimo/Energía/Sueño/Dolor) con guardado inmediato en `people.sensitive_context` jsonb. Love language (5 opciones), estado emocional, patrones relacionales. Tarjeta "Contexto privado" primera en el perfil para relaciones personales/familia. Tarjeta "Perfil profesional" colapsada por defecto.
+**Archivos clave:** `apps/web/src/app/(app)/people/[id]/PersonProfileCards.tsx`, `apps/web/src/app/(app)/actions.ts`, `packages/db/src/schema.ts`
+**Migraciones:** `20260515000005_people_sensitive_data.sql`, `20260515000006_people_emotional_context.sql`
+**Verificación:**
+- [x] SVG cycle wheel renderiza 28 segmentos con colores por fase
+- [x] Punto blanco brillante en día actual
+- [x] Recomendación de tono cambia por fase
+- [x] Registro de síntomas persiste en sensitive_context (jsonb merge)
+- [x] Tarjeta solo visible para personal/familia
+- [x] Build Next.js sin errores, 86/86 tests
+**Notas:** `updateSensitiveContextAction` hace `Object.assign` para merge jsonb. Profesional colapsado por defecto. Columnas nuevas: `cycle_data`, `sensitive_context`, `emotional_state`, `love_language`, `relationship_patterns`.
+
+---
+
+### 20 — Relationship Type Field
+**Estado:** ✅ Completo
+**Deploy:** ✅ Vercel
+**Commit:** `dd52634` (2026-05-15)
+**Fecha:** 2026-05-15
+**Descripción:** Campo `relationship_type` en tabla `people` con 6 valores: professional, networking, family, personal, strategic, developing. Editor inline en `/people/[id]` (RelationshipTypeEditor). Filtros en `/people` por tipo. Badge en cada person card. Tono del AI Briefing ajustado por tipo de relación. Widget en dashboard con distribución de tipos.
+**Archivos clave:** `apps/web/src/app/(app)/people/[id]/RelationshipTypeEditor.tsx`, `apps/web/src/app/(app)/people/page.tsx`
+**Migración:** `20260515000001_people_relationship_type.sql`
+**Verificación:**
+- [x] 6 tipos con emoji y color en editor inline
+- [x] Filtros en /people funcionan
+- [x] Badge en cards
+- [x] Briefing considera tipo de relación en prompt
+- [x] Build Next.js sin errores
+**Notas:** PersonRelationshipType en schema.ts. Editor inline usa server action `updatePersonRelationshipTypeAction`.
 
 ---
 

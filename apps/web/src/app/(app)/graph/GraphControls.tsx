@@ -1,41 +1,52 @@
 'use client';
 
-import type { RelationshipType } from '@sir/db';
+const CHIPS: { value: string; label: string; color: string }[] = [
+  { value: 'all',          label: 'Todos',        color: '#e2e8f0' },
+  { value: 'professional', label: 'Profesional',  color: '#818cf8' },
+  { value: 'networking',   label: 'Networking',   color: '#60a5fa' },
+  { value: 'family',       label: 'Familia',      color: '#ec4899' },
+  { value: 'personal',     label: 'Personal',     color: '#34d399' },
+  { value: 'strategic',    label: 'Estratégico',  color: '#fbbf24' },
+  { value: 'developing',   label: 'Desarrollo',   color: '#94a3b8' },
+];
 
 interface Props {
-  filterType: RelationshipType | 'all';
+  filterType: string;
   minStrength: number;
-  onFilterType: (v: RelationshipType | 'all') => void;
+  onFilterType: (v: string) => void;
   onMinStrength: (v: number) => void;
 }
-
-const TYPE_OPTIONS: { value: RelationshipType | 'all'; label: string }[] = [
-  { value: 'all',          label: 'Todos' },
-  { value: 'professional', label: 'Profesional' },
-  { value: 'personal',     label: 'Personal' },
-  { value: 'family',       label: 'Familia' },
-];
 
 export default function GraphControls({ filterType, minStrength, onFilterType, onMinStrength }: Props) {
   return (
     <div style={{
       position: 'absolute', top: 12, left: 12, zIndex: 10,
-      display: 'flex', gap: 12, alignItems: 'center',
+      display: 'flex', flexDirection: 'column', gap: 10,
       background: '#1a1d27', border: '1px solid #2a2d3e',
-      borderRadius: 8, padding: '8px 14px',
+      borderRadius: 10, padding: '10px 14px',
     }}>
-      <select
-        value={filterType}
-        onChange={e => onFilterType(e.target.value as RelationshipType | 'all')}
-        style={{
-          background: '#12141f', border: '1px solid #2a2d3e', borderRadius: 6,
-          color: '#e2e8f0', fontSize: 12, padding: '4px 8px', cursor: 'pointer', outline: 'none',
-        }}
-      >
-        {TYPE_OPTIONS.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {CHIPS.map(c => {
+          const active = filterType === c.value;
+          return (
+            <button
+              key={c.value}
+              onClick={() => onFilterType(c.value)}
+              style={{
+                fontSize: 11, fontWeight: active ? 700 : 500,
+                padding: '3px 9px', borderRadius: 20, cursor: 'pointer',
+                border: `1px solid ${active ? c.color : '#2a2d3e'}`,
+                background: active ? `${c.color}22` : 'transparent',
+                color: active ? c.color : '#64748b',
+                transition: 'all 0.15s',
+                outline: 'none',
+              }}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#94a3b8', userSelect: 'none' }}>
         Fuerza mín.
