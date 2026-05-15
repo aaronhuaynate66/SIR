@@ -117,9 +117,12 @@ export interface DbPerson {
   anniversary: string | null;
   location: string | null;
   education: string | null;
-  work_history: WorkHistoryEntry[] | null;
-  cycle_data: CycleData | null;
-  sensitive_context: Record<string, unknown> | null;
+  work_history:          WorkHistoryEntry[] | null;
+  cycle_data:            CycleData | null;
+  sensitive_context:     Record<string, unknown> | null;
+  emotional_state:       string | null;
+  love_language:         string | null;
+  relationship_patterns: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -144,7 +147,8 @@ export type InsertPerson = Pick<DbPerson, 'user_id' | 'name'> &
   Partial<Pick<DbPerson, 'email' | 'phone' | 'organization' | 'role' |
     'linkedin_url' | 'instagram_url' | 'avatar_url' | 'notes' | 'tags' | 'language' |
     'relationship_type' | 'birthday' | 'anniversary' | 'location' | 'education' |
-    'work_history' | 'cycle_data' | 'sensitive_context'>>;
+    'work_history' | 'cycle_data' | 'sensitive_context' |
+    'emotional_state' | 'love_language' | 'relationship_patterns'>>;
 
 export type InsertRelationship = Pick<DbRelationship, 'user_id' | 'person_id'> &
   Partial<Pick<DbRelationship, 'strength' | 'reciprocity' | 'trust_score' |

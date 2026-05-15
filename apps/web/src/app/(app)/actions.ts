@@ -123,15 +123,18 @@ export async function registerInteractionAction(
 export async function updatePersonExtraFieldsAction(
   personId: string,
   fields: {
-    birthday?:      string | null;
-    anniversary?:   string | null;
-    instagram_url?: string | null;
-    linkedin_url?:  string | null;
-    location?:      string | null;
-    education?:     string | null;
-    notes?:         string | null;
-    role?:          string | null;
-    organization?:  string | null;
+    birthday?:              string | null;
+    anniversary?:           string | null;
+    instagram_url?:         string | null;
+    linkedin_url?:          string | null;
+    location?:              string | null;
+    education?:             string | null;
+    notes?:                 string | null;
+    role?:                  string | null;
+    organization?:          string | null;
+    emotional_state?:       string | null;
+    love_language?:         string | null;
+    relationship_patterns?: string | null;
   },
 ): Promise<ActionResult> {
   const user = await getAuthUser();
@@ -339,6 +342,37 @@ export async function confirmScreenshotAction(
     return {};
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al confirmar' };
+  }
+}
+
+// ── Sensitive Context ─────────────────────────────────────────────────────────
+
+export async function updateSensitiveContextAction(
+  personId: string,
+  patch: Record<string, unknown>,
+): Promise<ActionResult> {
+  const user = await getAuthUser();
+  if (!user) return { error: 'No autenticado' };
+  try {
+    const db = getServiceClient();
+    const { data: existing } = await db
+      .from('people')
+      .select('sensitive_context')
+      .eq('id', personId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!existing) return { error: 'Not found' };
+    const prev = (existing.sensitive_context as Record<string, unknown> | null) ?? {};
+    const { error } = await db
+      .from('people')
+      .update({ sensitive_context: { ...prev, ...patch } })
+      .eq('id', personId)
+      .eq('user_id', user.id);
+    if (error) throw error;
+    revalidatePath(`/people/${personId}`);
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Error' };
   }
 }
 
