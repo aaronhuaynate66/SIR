@@ -14,12 +14,12 @@ interface NavItem {
 
 function buildNav(unreadCount: number): NavItem[] {
   return [
-    { href: '/dashboard',     label: 'Dashboard', icon: '⊞' },
-    { href: '/people',        label: 'Personas',  icon: '◎' },
+    { href: '/inicio',        label: 'Dashboard', icon: '⊞' },
+    { href: '/red',           label: 'Personas',  icon: '◎' },
     { href: '/grafo',         label: 'Grafo',     icon: '◯' },
-    { href: '/signals',       label: 'Señales',   icon: '◆' },
-    { href: '/memories',      label: 'Memorias',  icon: '◈' },
-    { href: '/state',         label: 'Estado',    icon: '◉' },
+    { href: '/senales',       label: 'Señales',   icon: '◆' },
+    { href: '/memorias',      label: 'Memorias',  icon: '◈' },
+    { href: '/estado',        label: 'Estado',    icon: '◉' },
     { href: '/executive',     label: 'Executive', icon: '◈', pro: true },
     { href: '/notifications', label: 'Alertas',   icon: '🔔', ...(unreadCount > 0 ? { badge: unreadCount } : {}) },
     { href: '/settings',      label: 'Config',    icon: '⚙' },

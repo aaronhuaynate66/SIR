@@ -126,6 +126,7 @@ export interface DbPerson {
   notes_professional:    string | null;
   notes_social:          string | null;
   notes_personal:        string | null;
+  slug:                  string | null;
   created_at: string;
   updated_at: string;
 }
@@ -152,7 +153,7 @@ export type InsertPerson = Pick<DbPerson, 'user_id' | 'name'> &
     'relationship_type' | 'birthday' | 'anniversary' | 'location' | 'education' |
     'work_history' | 'cycle_data' | 'sensitive_context' |
     'emotional_state' | 'love_language' | 'relationship_patterns' |
-    'notes_professional' | 'notes_social' | 'notes_personal'>>;
+    'notes_professional' | 'notes_social' | 'notes_personal' | 'slug'>>;
 
 export type InsertRelationship = Pick<DbRelationship, 'user_id' | 'person_id'> &
   Partial<Pick<DbRelationship, 'strength' | 'reciprocity' | 'trust_score' |

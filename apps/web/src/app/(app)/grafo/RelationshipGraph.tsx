@@ -416,7 +416,7 @@ function SidePanel({ data, onClose }: { data: PersonNodeData; onClose: () => voi
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Link
-          href={`/people/${person.id}`}
+          href={`/red/${(person as unknown as { slug?: string | null }).slug ?? person.id}`}
           style={{
             display: 'block', textAlign: 'center', padding: '9px',
             background: '#6366f1', borderRadius: 8, color: '#fff',

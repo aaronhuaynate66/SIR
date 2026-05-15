@@ -189,7 +189,7 @@ export default async function DashboardPage() {
           <p style={{ color: '#64748b', fontSize: 14, margin: 0, textTransform: 'capitalize' }}>{todayStr}</p>
         </div>
         {data.humanState ? (
-          <Link href="/state" style={{
+          <Link href="/estado" style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '10px 16px', background: '#1a1d27',
             border: '1px solid #2a2d3e', borderRadius: 12,
@@ -212,7 +212,7 @@ export default async function DashboardPage() {
             </div>
           </Link>
         ) : (
-          <Link href="/state" style={{
+          <Link href="/estado" style={{
             padding: '9px 16px', background: '#1a1d27',
             border: '1px dashed #2a2d3e', borderRadius: 10,
             textDecoration: 'none', fontSize: 13, color: '#64748b',
@@ -248,7 +248,7 @@ export default async function DashboardPage() {
             }}>
               {data.opportunities.length}
             </span>
-            <Link href="/signals" style={{ marginLeft: 'auto', fontSize: 12, color: '#818cf8', textDecoration: 'none' }}>
+            <Link href="/senales" style={{ marginLeft: 'auto', fontSize: 12, color: '#818cf8', textDecoration: 'none' }}>
               Ver todas →
             </Link>
           </div>
@@ -282,7 +282,7 @@ export default async function DashboardPage() {
                     {opp.action_recommendation}
                   </p>
                   {opp.person && (
-                    <Link href={`/people/${opp.person.id}`} style={{
+                    <Link href={`/red/${opp.person.id}`} style={{
                       fontSize: 11, fontWeight: 600, color,
                       textDecoration: 'none', padding: '4px 10px',
                       background: color + '15', border: `1px solid ${color}33`, borderRadius: 6,
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
             {data.suggestions.map(s => {
               const uc = URGENCY_COLOR[s.urgency];
               return (
-                <Link key={s.person_id} href={`/people/${s.person_id}`} style={{
+                <Link key={s.person_id} href={`/red/${s.person_id}`} style={{
                   display: 'block',
                   background: '#1a1d27', border: '1px solid #2a2d3e', borderRadius: 12,
                   padding: 14, textDecoration: 'none',
@@ -361,7 +361,7 @@ export default async function DashboardPage() {
         <div style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, color: '#e2e8f0', margin: 0 }}>Red por tipo</h2>
-            <Link href="/people" style={{ fontSize: 12, color: '#818cf8', textDecoration: 'none' }}>Ver todas →</Link>
+            <Link href="/red" style={{ fontSize: 12, color: '#818cf8', textDecoration: 'none' }}>Ver todas →</Link>
           </div>
           <div style={{
             background: '#1a1d27', border: '1px solid #2a2d3e',
@@ -372,7 +372,7 @@ export default async function DashboardPage() {
               const color = REL_BREAKDOWN_COLORS[type] ?? '#94a3b8';
               const count = data.relTypeBreakdown[type] ?? 0;
               return (
-                <Link key={type} href={`/people?type=${type}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Link key={type} href={`/red?type=${type}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{
                     display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0,
                   }} />
@@ -421,18 +421,18 @@ export default async function DashboardPage() {
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h2 style={{ fontSize: 15, fontWeight: 600, color: '#e2e8f0', margin: 0 }}>Personas</h2>
-            <Link href="/people" style={{ fontSize: 12, color: '#818cf8', textDecoration: 'none' }}>Ver todas →</Link>
+            <Link href="/red" style={{ fontSize: 12, color: '#818cf8', textDecoration: 'none' }}>Ver todas →</Link>
           </div>
           {data.suggestions.length === 0 && data.totalPeople === 0 ? (
             <div style={emptyCard}>
               <p style={{ color: '#475569', fontSize: 14, margin: 0 }}>
-                No hay personas aún. <Link href="/people" style={{ color: '#818cf8', textDecoration: 'none' }}>Crea un contacto →</Link>
+                No hay personas aún. <Link href="/red" style={{ color: '#818cf8', textDecoration: 'none' }}>Crea un contacto →</Link>
               </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {data.suggestions.slice(0, 4).map(s => (
-                <Link key={s.person_id} href={`/people/${s.person_id}`} style={contactRow}>
+                <Link key={s.person_id} href={`/red/${s.person_id}`} style={contactRow}>
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%',
                     background: avatarColor(s.person_name),

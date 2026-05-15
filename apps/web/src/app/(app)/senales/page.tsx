@@ -116,11 +116,11 @@ export default async function SignalsPage({
 
       {/* Type filter tabs */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-        <Link href="/signals" style={filterChip(!typeFilter, '#818cf8')}>Todas</Link>
+        <Link href="/senales" style={filterChip(!typeFilter, '#818cf8')}>Todas</Link>
         {SOCIAL_TYPES.map(t => (
           <Link
             key={t}
-            href={`/signals?type=${t}${personFilter ? `&person_id=${personFilter}` : ''}`}
+            href={`/senales?type=${t}${personFilter ? `&person_id=${personFilter}` : ''}`}
             style={filterChip(typeFilter === t, SIGNAL_COLORS[t])}
           >
             {SIGNAL_LABELS[t]}
@@ -136,7 +136,7 @@ export default async function SignalsPage({
           </span>
           {personFilter && (
             <Link
-              href={typeFilter ? `/signals?type=${typeFilter}` : '/signals'}
+              href={typeFilter ? `/senales?type=${typeFilter}` : '/senales'}
               style={filterChip(false, '#94a3b8')}
             >
               ✕ Limpiar
@@ -145,7 +145,7 @@ export default async function SignalsPage({
           {allPeople.slice(0, 12).map(p => (
             <Link
               key={p.id}
-              href={`/signals?person_id=${p.id}${typeFilter ? `&type=${typeFilter}` : ''}`}
+              href={`/senales?person_id=${p.id}${typeFilter ? `&type=${typeFilter}` : ''}`}
               style={filterChip(personFilter === p.id, '#ec4899')}
             >
               {p.name}
@@ -242,7 +242,7 @@ export default async function SignalsPage({
 
                   {person && (
                     <Link
-                      href={`/people/${person.id}`}
+                      href={`/red/${person.id}`}
                       style={{
                         flexShrink: 0, padding: '6px 14px',
                         background: color + '22', border: `1px solid ${color}44`,

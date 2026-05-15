@@ -58,7 +58,7 @@ export default async function PeoplePage({
 
   let peopleQuery = db
     .from('people')
-    .select('id, name, organization, role, email, notes, relationship_type, created_at')
+    .select('id, name, organization, role, email, notes, relationship_type, slug, created_at')
     .eq('user_id', user.id)
     .order('name');
 
@@ -99,7 +99,7 @@ export default async function PeoplePage({
           return (
             <Link
               key={chip.value}
-              href={chip.value === 'all' ? '/people' : `/people?type=${chip.value}`}
+              href={chip.value === 'all' ? '/red' : `/red?type=${chip.value}`}
               style={{
                 padding: '5px 14px',
                 borderRadius: 20,
@@ -125,7 +125,7 @@ export default async function PeoplePage({
           </p>
           <p style={{ color: '#334155', fontSize: 13 }}>
             {activeFilter !== 'all' ? (
-              <Link href="/people" style={{ color: '#818cf8', textDecoration: 'none' }}>Ver todos los contactos →</Link>
+              <Link href="/red" style={{ color: '#818cf8', textDecoration: 'none' }}>Ver todos los contactos →</Link>
             ) : (
               'Crea tu primer contacto con el botón de arriba.'
             )}
@@ -141,7 +141,7 @@ export default async function PeoplePage({
             const typeColor = REL_TYPE_COLORS[relType];
 
             return (
-              <Link key={person.id} href={`/people/${person.id}`} style={card}>
+              <Link key={person.id} href={`/red/${(person as DbPerson & { slug?: string | null }).slug ?? person.id}`} style={card}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                   <div style={{
                     width: 44, height: 44, borderRadius: '50%', flexShrink: 0,

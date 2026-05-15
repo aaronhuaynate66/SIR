@@ -13,6 +13,7 @@ import {
 } from '@sir/db';
 import type { CycleData } from '@sir/db';
 import { trackServerEvent, EVENTS } from '@sir/analytics';
+import { generateSlug } from '@sir/shared';
 import { handleCreateSignal } from '@/handlers/signals';
 import type { AnalysisResult } from '@/app/api/people/[id]/analyze-screenshot/route';
 
@@ -34,17 +35,30 @@ export async function createPersonAction(formData: FormData): Promise<ActionResu
     const notes = (formData.get('notes') as string)?.trim()        || null;
     const relType = ((formData.get('relationship_type') as string)?.trim() || 'networking') as import('@sir/db').PersonRelationshipType;
 
+    // Generate unique slug for this user
+    const baseSlug = generateSlug(name);
+    const db = getServiceClient();
+    let slug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const { data: existing } = await db.from('people').select('id').eq('user_id', user.id).eq('slug', slug).maybeSingle();
+      if (!existing) break;
+      counter++;
+      slug = `${baseSlug}-${counter}`;
+    }
+
     await createPerson({
       user_id: user.id,
       name,
       relationship_type: relType,
+      slug,
       ...(org   ? { organization: org }   : {}),
       ...(role  ? { role }               : {}),
       ...(email ? { email }              : {}),
       ...(notes ? { notes }              : {}),
     });
     trackServerEvent(user.id, EVENTS.PERSON_CREATED, { relationship_type: relType });
-    revalidatePath('/people');
+    revalidatePath('/red');
     return {};
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al crear persona' };
@@ -64,7 +78,7 @@ export async function updatePersonRelationshipTypeAction(
       .eq('id', personId)
       .eq('user_id', user.id);
     if (error) throw error;
-    revalidatePath(`/people/${personId}`);
+    revalidatePath(`/red/${personId}`);
     revalidatePath('/people');
     return {};
   } catch (e) {
@@ -113,7 +127,7 @@ export async function registerInteractionAction(
       payload: { person_id: personId, person_name: personName, quality, notes: notes || undefined },
     }).catch(() => undefined);
 
-    revalidatePath(`/people/${personId}`);
+    revalidatePath(`/red/${personId}`);
     return {};
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al registrar interacción' };
@@ -152,7 +166,7 @@ export async function updatePersonExtraFieldsAction(
       .eq('id', personId)
       .eq('user_id', user.id);
     if (error) throw error;
-    revalidatePath(`/people/${personId}`);
+    revalidatePath(`/red/${personId}`);
     return {};
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al actualizar' };
@@ -353,7 +367,7 @@ export async function confirmScreenshotAction(
       fields_updated:   Object.keys(update),
       person_id:        personId,
     });
-    revalidatePath(`/people/${personId}`);
+    revalidatePath(`/red/${personId}`);
     return {};
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al confirmar' };
@@ -384,7 +398,7 @@ export async function updateSensitiveContextAction(
       .eq('id', personId)
       .eq('user_id', user.id);
     if (error) throw error;
-    revalidatePath(`/people/${personId}`);
+    revalidatePath(`/red/${personId}`);
     return {};
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error' };
@@ -401,7 +415,7 @@ export async function updateCycleDataAction(
   if (!user) return { error: 'No autenticado' };
   try {
     await updatePerson(personId, { cycle_data: cycleData });
-    revalidatePath(`/people/${personId}`);
+    revalidatePath(`/red/${personId}`);
     return {};
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al actualizar' };
@@ -452,8 +466,8 @@ export async function submitStateAction(
       interaction_risk,
     });
 
-    revalidatePath('/state');
-    revalidatePath('/dashboard');
+    revalidatePath('/estado');
+    revalidatePath('/inicio');
     return { scores: { composite_score, availability_score, interaction_risk } };
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Error al guardar estado' };

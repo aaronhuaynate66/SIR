@@ -6,6 +6,8 @@ Versión en producción: `d0fbcfb` — smart summary + split notes by life area
 
 **Nota 2026-05-15 (última sesión):** Módulo 22 — Security Layer + Privacy Controls. RLS verificado en todas las tablas, audit_log creado. Rate limiting Supabase (20 AI calls/hora) + plan limits (free: 5 briefings total, individual/pro: 50/mes) wired en /api/briefing, /api/signals/capture, /api/human-state. GDPR: GET /api/user/export (ZIP con 9 JSONs) y DELETE /api/user/me (con confirm:true, cascade). Migraciones pendientes de aplicar: 000005-000008.
 
+**Nota 2026-05-15 (URL taxonomy):** URL taxonomy implemented. Rutas limpias: /red, /red/[slug], /memorias, /senales, /estado, /inicio. Slug generado en createPersonAction con deduplicación. UUID-vs-slug dual lookup en /red/[slug]/page.tsx con redirect canónico. Redirects 301 en next.config.mjs para todas las rutas antiguas. Migración 20260515000009_people_slug.sql creada (pendiente de aplicar en Supabase).
+
 ## URLs de producción
 - Web: https://sir-web.vercel.app
 - Admin: https://sir-admin.vercel.app

@@ -1,3 +1,13 @@
+export function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')   // strip diacritics (á→a, é→e…)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
 export function ok<T>(value: T): { ok: true; value: T } {
   return { ok: true, value };
 }
