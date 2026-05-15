@@ -8,30 +8,39 @@ interface AnalyzeBody {
   mimeType: string; // e.g. "image/jpeg"
 }
 
+export interface WorkHistoryEntry {
+  role:    string;
+  company: string;
+  period:  string;
+}
+
 export interface AnalysisResult {
   type:     'linkedin' | 'instagram' | 'whatsapp' | 'unknown';
   data: {
-    name?:          string;
-    role?:          string;
-    organization?:  string;
-    email?:         string;
-    phone?:         string;
-    linkedin_url?:  string;
-    instagram_url?: string;
-    birthday?:      string; // ISO date YYYY-MM-DD
-    anniversary?:   string; // ISO date YYYY-MM-DD
-    notes?:         string;
-    raw_summary?:   string;
+    name?:          string | null;
+    role?:          string | null;
+    organization?:  string | null;
+    email?:         string | null;
+    phone?:         string | null;
+    linkedin_url?:  string | null;
+    instagram_url?: string | null;
+    birthday?:      string | null; // YYYY-MM-DD
+    anniversary?:   string | null; // YYYY-MM-DD
+    location?:      string | null;
+    education?:     string | null;
+    connections?:   number | null;
+    work_history?:  WorkHistoryEntry[] | null;
+    notes?:         string | null;
+    raw_summary?:   string | null;
   };
 }
 
-const SYSTEM = `You are an expert at extracting contact information from screenshots.
-Analyze the provided screenshot and extract as much structured data as possible.
+const SYSTEM = `You are an expert at extracting structured contact information from screenshots.
+Analyze the screenshot and return ONLY a valid JSON object — no markdown, no extra text.
 
-Detect the platform type: "linkedin" (LinkedIn profile), "instagram" (Instagram profile/DM),
-"whatsapp" (WhatsApp chat or contact), or "unknown".
+Detect the platform: "linkedin", "instagram", "whatsapp", or "unknown".
 
-Return ONLY a valid JSON object with this exact structure:
+Required JSON structure:
 {
   "type": "linkedin" | "instagram" | "whatsapp" | "unknown",
   "data": {
@@ -44,16 +53,27 @@ Return ONLY a valid JSON object with this exact structure:
     "instagram_url": string or null,
     "birthday": "YYYY-MM-DD" or null,
     "anniversary": "YYYY-MM-DD" or null,
-    "notes": string or null,
+    "location": string or null,
+    "education": string or null,
+    "connections": number or null,
+    "work_history": [
+      { "role": "...", "company": "...", "period": "..." }
+    ] or null,
+    "notes": "brief qualitative summary only — do NOT include location, education, work history or connections here",
     "raw_summary": "one sentence describing what you see"
   }
 }
 
 Rules:
-- For birthday/anniversary: only include if explicitly visible in the screenshot. Format as YYYY-MM-DD. If only month/day visible use 2000 as the year.
-- For linkedin_url: construct from the username if visible (https://linkedin.com/in/username)
-- For instagram_url: construct from the handle if visible (https://instagram.com/handle)
-- Return ONLY the JSON object, no markdown, no extra text.`;
+- location: city/region/country visible on the profile (e.g. "Área metropolitana de Lima")
+- education: most recent or most prominent institution (e.g. "Universidad Marcelino Champagnat")
+- connections: numeric count if visible (e.g. 55), otherwise null
+- work_history: extract ALL job entries visible, each with role, company, and period (e.g. "oct. 2025 - present")
+- notes: ONLY qualitative observations not captured by other fields. Never put location/education/work/connections in notes.
+- birthday/anniversary: only if explicitly shown. Format YYYY-MM-DD; use 2000 as year if only month/day visible.
+- linkedin_url: build from username if visible (https://linkedin.com/in/username)
+- instagram_url: build from handle if visible (https://instagram.com/handle)
+- Return ONLY the JSON object.`;
 
 export async function POST(
   req: Request,
@@ -86,7 +106,7 @@ export async function POST(
 
     const msg = await claude.messages.create({
       model:      'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 1500,
       system:     SYSTEM,
       messages: [{
         role: 'user',

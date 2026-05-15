@@ -167,6 +167,8 @@ export async function confirmScreenshotAction(
     if (confirmedData.email         !== undefined && confirmedData.email)         update['email']        = confirmedData.email;
     if (confirmedData.phone         !== undefined && confirmedData.phone)         update['phone']        = confirmedData.phone;
 
+    if (confirmedData.notes !== undefined && confirmedData.notes) update['notes'] = confirmedData.notes;
+
     if (Object.keys(update).length > 0) {
       const { error } = await db
         .from('people')
@@ -176,25 +178,72 @@ export async function confirmScreenshotAction(
       if (error) throw error;
     }
 
-    // Create a social memory
     const summary = confirmedData.raw_summary ?? `Screenshot de ${result.type} analizado`;
-    await createMemory({
-      user_id:    user.id,
-      layer:      'social',
-      content:    `[Screenshot ${result.type}] ${personName}: ${summary}`,
-      importance: 60,
-    }).catch(() => undefined);
+    const memoryOps: Promise<unknown>[] = [];
 
-    // Create a signal
+    // Social memory — raw summary
+    memoryOps.push(
+      createMemory({
+        user_id:    user.id,
+        layer:      'social',
+        content:    `[Screenshot ${result.type}] ${personName}: ${summary}`,
+        importance: 60,
+      }).catch(() => undefined)
+    );
+
+    // Semantic memory — location
+    if (confirmedData.location) {
+      memoryOps.push(
+        createMemory({
+          user_id:    user.id,
+          layer:      'semantic',
+          content:    `${personName} se ubica en ${confirmedData.location}.`,
+          importance: 50,
+        }).catch(() => undefined)
+      );
+    }
+
+    // Semantic memory — education
+    if (confirmedData.education) {
+      memoryOps.push(
+        createMemory({
+          user_id:    user.id,
+          layer:      'semantic',
+          content:    `${personName} estudió en ${confirmedData.education}.`,
+          importance: 50,
+        }).catch(() => undefined)
+      );
+    }
+
+    // Semantic memory — work history (one memory with full history)
+    if (confirmedData.work_history && confirmedData.work_history.length > 0) {
+      const historyText = confirmedData.work_history
+        .map((e: import('@/app/api/people/[id]/analyze-screenshot/route').WorkHistoryEntry) =>
+          `• ${e.role} en ${e.company} (${e.period})`
+        )
+        .join('\n');
+      memoryOps.push(
+        createMemory({
+          user_id:    user.id,
+          layer:      'semantic',
+          content:    `Historial laboral de ${personName}:\n${historyText}`,
+          importance: 70,
+        }).catch(() => undefined)
+      );
+    }
+
+    await Promise.all(memoryOps);
+
+    // Signal
     await createSignal({
       user_id: user.id,
       type:    'relationship',
       payload: {
-        person_id:    personId,
-        person_name:  personName,
-        source:       `screenshot_${result.type}`,
+        person_id:   personId,
+        person_name: personName,
+        source:      `screenshot_${result.type}`,
         summary,
-        extracted:    confirmedData,
+        extracted:   confirmedData,
       },
     }).catch(() => undefined);
 

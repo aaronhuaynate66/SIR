@@ -17,6 +17,22 @@ const PLATFORM_COLORS: Record<AnalysisResult['type'], string> = {
   unknown:   '#64748b',
 };
 
+// Fields rendered as editable inputs: [key, label, inputType]
+const EDITABLE_FIELDS: [keyof AnalysisResult['data'], string, string][] = [
+  ['name',          'Nombre',        'text' ],
+  ['role',          'Cargo',         'text' ],
+  ['organization',  'Empresa',       'text' ],
+  ['email',         'Email',         'email'],
+  ['phone',         'Teléfono',      'tel'  ],
+  ['linkedin_url',  'LinkedIn URL',  'url'  ],
+  ['instagram_url', 'Instagram URL', 'url'  ],
+  ['birthday',      'Cumpleaños',    'date' ],
+  ['anniversary',   'Aniversario',   'date' ],
+  ['location',      'Ubicación',     'text' ],
+  ['education',     'Educación',     'text' ],
+  ['notes',         'Notas',         'text' ],
+];
+
 interface Props {
   personId:   string;
   personName: string;
@@ -25,12 +41,12 @@ interface Props {
 export default function ScreenshotAnalyzer({ personId, personName }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [analyzing, setAnalyzing]     = useState(false);
-  const [analyzeErr, setAnalyzeErr]   = useState<string | null>(null);
-  const [result, setResult]           = useState<AnalysisResult | null>(null);
-  const [confirmed, setConfirmed]     = useState<AnalysisResult['data'] | null>(null);
-  const [saved, setSaved]             = useState(false);
-  const [isPending, startTransition]  = useTransition();
+  const [analyzing, setAnalyzing]    = useState(false);
+  const [analyzeErr, setAnalyzeErr]  = useState<string | null>(null);
+  const [result, setResult]          = useState<AnalysisResult | null>(null);
+  const [confirmed, setConfirmed]    = useState<AnalysisResult['data'] | null>(null);
+  const [saved, setSaved]            = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   function openPicker() {
     setAnalyzeErr(null);
@@ -42,8 +58,6 @@ export default function ScreenshotAnalyzer({ personId, personName }: Props) {
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Reset picker so same file can be re-selected
     e.target.value = '';
 
     setAnalyzing(true);
@@ -95,45 +109,35 @@ export default function ScreenshotAnalyzer({ personId, personName }: Props) {
         onClick={openPicker}
         disabled={analyzing}
         style={{
-          display:      'flex',
-          alignItems:   'center',
-          gap:          6,
-          padding:      '6px 14px',
-          borderRadius: 8,
-          border:       '1px solid #2a2d3e',
-          background:   analyzing ? '#1a1d27' : '#1e2130',
-          color:        analyzing ? '#475569' : '#94a3b8',
-          fontSize:     13,
-          fontWeight:   600,
-          cursor:       analyzing ? 'wait' : 'pointer',
-          transition:   'all 0.15s',
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 14px', borderRadius: 8,
+          border: '1px solid #2a2d3e',
+          background: analyzing ? '#1a1d27' : '#1e2130',
+          color: analyzing ? '#475569' : '#94a3b8',
+          fontSize: 13, fontWeight: 600,
+          cursor: analyzing ? 'wait' : 'pointer', transition: 'all 0.15s',
         }}
       >
         {analyzing ? '🔍 Analizando…' : '📷 Analizar screenshot'}
       </button>
 
       {saved && (
-        <p style={{ fontSize: 12, color: '#34d399', margin: '6px 0 0' }}>
-          ✓ Datos guardados correctamente
-        </p>
+        <p style={{ fontSize: 12, color: '#34d399', margin: '6px 0 0' }}>✓ Datos guardados</p>
       )}
       {analyzeErr && (
         <p style={{ fontSize: 12, color: '#f87171', margin: '6px 0 0' }}>{analyzeErr}</p>
       )}
 
-      {/* Confirmation modal */}
       {result && confirmed && (
         <div style={overlay}>
           <div style={modal}>
+            {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
               <span style={{
-                padding:      '3px 10px',
-                borderRadius: 6,
-                fontSize:     12,
-                fontWeight:   700,
-                background:   PLATFORM_COLORS[result.type] + '22',
-                color:        PLATFORM_COLORS[result.type],
-                border:       `1px solid ${PLATFORM_COLORS[result.type]}44`,
+                padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+                background: PLATFORM_COLORS[result.type] + '22',
+                color: PLATFORM_COLORS[result.type],
+                border: `1px solid ${PLATFORM_COLORS[result.type]}44`,
               }}>
                 {PLATFORM_LABELS[result.type]}
               </span>
@@ -148,23 +152,14 @@ export default function ScreenshotAnalyzer({ personId, personName }: Props) {
               </p>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {(
-                [
-                  ['name',          'Nombre',       'text'  ],
-                  ['role',          'Cargo',         'text'  ],
-                  ['organization',  'Empresa',       'text'  ],
-                  ['email',         'Email',         'email' ],
-                  ['phone',         'Teléfono',      'tel'   ],
-                  ['linkedin_url',  'LinkedIn URL',  'url'   ],
-                  ['instagram_url', 'Instagram URL', 'url'   ],
-                  ['birthday',      'Cumpleaños',    'date'  ],
-                  ['anniversary',   'Aniversario',   'date'  ],
-                  ['notes',         'Notas',         'text'  ],
-                ] as [keyof AnalysisResult['data'], string, string][]
-              ).map(([key, label, type]) => {
-                const val = confirmed[key] ?? '';
-                if (!val && key === 'notes') return null;
+            {/* Editable fields */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {EDITABLE_FIELDS.map(([key, label, type]) => {
+                const raw = confirmed[key];
+                // skip array fields and null-ish non-critical fields
+                if (Array.isArray(raw)) return null;
+                const val = (raw as string | null | undefined) ?? '';
+                if (!val && (key === 'notes' || key === 'connections')) return null;
                 return (
                   <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -179,7 +174,45 @@ export default function ScreenshotAnalyzer({ personId, personName }: Props) {
                   </label>
                 );
               })}
+
+              {/* Connections — read-only numeric */}
+              {confirmed.connections != null && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Conexiones
+                  </span>
+                  <span style={{ fontSize: 13, color: '#94a3b8', padding: '7px 12px', background: '#1a1d27', border: '1px solid #2a2d3e', borderRadius: 8 }}>
+                    {String(confirmed.connections)}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Work history — read-only table */}
+            {confirmed.work_history && confirmed.work_history.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 8 }}>
+                  Experiencia laboral
+                </span>
+                <div style={{ background: '#1a1d27', border: '1px solid #2a2d3e', borderRadius: 8, overflow: 'hidden' }}>
+                  {confirmed.work_history.map((entry, i) => (
+                    <div key={i} style={{
+                      display: 'grid', gridTemplateColumns: '1fr 1fr auto',
+                      gap: 8, padding: '8px 12px',
+                      borderBottom: i < (confirmed.work_history?.length ?? 0) - 1 ? '1px solid #2a2d3e' : 'none',
+                      alignItems: 'center',
+                    }}>
+                      <span style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 500 }}>{entry.role}</span>
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>{entry.company}</span>
+                      <span style={{ fontSize: 11, color: '#475569', whiteSpace: 'nowrap' }}>{entry.period}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: 11, color: '#334155' }}>
+                  Se guardará como memoria semántica.
+                </p>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button
@@ -213,39 +246,17 @@ function toBase64(file: File): Promise<string> {
 }
 
 const overlay: React.CSSProperties = {
-  position:        'fixed',
-  inset:           0,
-  background:      'rgba(0,0,0,0.7)',
-  zIndex:          1000,
-  display:         'flex',
-  alignItems:      'center',
-  justifyContent:  'center',
-  padding:         20,
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+  zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
 };
 const modal: React.CSSProperties = {
-  background:   '#13151f',
-  border:       '1px solid #2a2d3e',
-  borderRadius: 16,
-  padding:      28,
-  width:        '100%',
-  maxWidth:     480,
-  maxHeight:    '90vh',
-  overflowY:    'auto',
+  background: '#13151f', border: '1px solid #2a2d3e', borderRadius: 16,
+  padding: 28, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto',
 };
 const fieldStyle: React.CSSProperties = {
-  background:   '#1a1d27',
-  border:       '1px solid #2a2d3e',
-  borderRadius: 8,
-  padding:      '7px 12px',
-  color:        '#e2e8f0',
-  fontSize:     13,
-  outline:      'none',
-  width:        '100%',
+  background: '#1a1d27', border: '1px solid #2a2d3e', borderRadius: 8,
+  padding: '7px 12px', color: '#e2e8f0', fontSize: 13, outline: 'none', width: '100%',
 };
 const btnBase: React.CSSProperties = {
-  padding:      '8px 20px',
-  borderRadius: 8,
-  fontSize:     13,
-  fontWeight:   600,
-  cursor:       'pointer',
+  padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
 };
