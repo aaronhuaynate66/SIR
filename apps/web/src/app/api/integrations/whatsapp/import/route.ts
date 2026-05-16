@@ -129,6 +129,10 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'content required' }, { status: 400 });
   }
 
+  console.log('[whatsapp-import] Received:', content.length, 'chars');
+  console.log('[whatsapp-import] First 150 chars:', JSON.stringify(content.substring(0, 150)));
+  console.log('[whatsapp-import] userDisplayName:', userDisplayName);
+
   const db = getServiceClient();
 
   // Pre-load people
@@ -144,6 +148,10 @@ export async function POST(req: Request): Promise<Response> {
 
   // Parse WhatsApp export
   const msgsByContact = parseWhatsAppExport(content, userDisplayName);
+
+  console.log('[whatsapp-import] Parsed contacts:', msgsByContact.size);
+  console.log('[whatsapp-import] Contact names found:', Array.from(msgsByContact.keys()).slice(0, 5));
+  console.log('[whatsapp-import] People in DB:', nameToPersonId.size);
 
   const results: Array<{ contact: string; person: string; messages: number }> = [];
   const statsList: ConversationStats[] = [];
@@ -186,7 +194,17 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   if (statsList.length === 0) {
-    return Response.json({ processed: 0, matched: 0, message: 'No se encontraron coincidencias con personas en tu red' });
+    const firstLines = content.split('\n').slice(0, 5).join('\n');
+    return Response.json({
+      processed: 0, matched: 0,
+      message: 'No se encontraron coincidencias con personas en tu red',
+      debug: {
+        parsed_contacts: msgsByContact.size,
+        people_in_db: nameToPersonId.size,
+        first_lines: firstLines,
+        contact_names_found: Array.from(msgsByContact.keys()).slice(0, 10),
+      },
+    });
   }
 
   // Claude Haiku analysis

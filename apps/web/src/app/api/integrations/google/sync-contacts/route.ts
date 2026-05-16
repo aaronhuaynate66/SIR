@@ -49,10 +49,12 @@ export async function POST(): Promise<Response> {
     return Response.json({ error: (e as Error).message }, { status: 401 });
   }
 
-  const { data: existingPeople } = await db
+  const { data: existingPeople, count: totalBefore } = await db
     .from('people')
-    .select('id, name, email, phone, organization, role')
+    .select('id, name, email, phone, organization, role', { count: 'exact' })
     .eq('user_id', user.id);
+
+  console.log('[sync-contacts] People in DB before sync:', totalBefore);
 
   type ExistingPerson = { id: string; name: string; email: string | null; phone: string | null; organization: string | null; role: string | null };
   const byEmail = new Map<string, ExistingPerson>();
@@ -114,7 +116,7 @@ export async function POST(): Promise<Response> {
           skipped++;
         }
       } else {
-        await db.from('people').insert({
+        const { data: inserted } = await db.from('people').insert({
           user_id:           user.id,
           name,
           email,
@@ -123,10 +125,11 @@ export async function POST(): Promise<Response> {
           role,
           relationship_type: 'networking',
           slug:              makeSlug(name),
-        });
-        const fake: ExistingPerson = { id: 'new', name, email, phone, organization: org, role };
-        if (email) byEmail.set(email, fake);
-        byName.set(normalizeName(name), fake);
+        }).select('id').single();
+        const realId = inserted?.id ?? 'unknown';
+        const entry: ExistingPerson = { id: realId, name, email, phone, organization: org, role };
+        if (email) byEmail.set(email, entry);
+        byName.set(normalizeName(name), entry);
         created++;
       }
     }
@@ -134,10 +137,17 @@ export async function POST(): Promise<Response> {
     pageToken = data.nextPageToken;
   } while (pageToken);
 
+  const { count: totalAfter } = await db
+    .from('people')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  console.log('[sync-contacts] People in DB after sync:', totalAfter, '| created:', created, '| updated:', updated, '| skipped:', skipped);
+
   await db.from('google_integrations').update({
     contacts_synced: created + updated,
     last_sync_at:    new Date().toISOString(),
   }).eq('user_id', user.id);
 
-  return Response.json({ created, updated, skipped });
+  return Response.json({ created, updated, skipped, total_before: totalBefore, total_after: totalAfter });
 }

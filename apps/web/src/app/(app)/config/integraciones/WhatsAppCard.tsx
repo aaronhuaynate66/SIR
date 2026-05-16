@@ -40,27 +40,43 @@ export default function WhatsAppCard() {
     setErrMsg('');
     setResult(null);
 
+    let content: string;
     try {
-      const content = await readFileAsText(file);
+      const raw = await readFileAsText(file);
+      // Truncate to 3MB to avoid Vercel 4.5MB body limit
+      content = raw.length > 3_000_000 ? raw.slice(0, 3_000_000) : raw;
+    } catch (e) {
+      setErrMsg(`Error al leer el archivo: ${String(e)}`);
+      setLoading(false);
+      return;
+    }
+
+    try {
       const res = await fetch('/api/integrations/whatsapp/import', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ content, userDisplayName: userName }),
       });
-      const data = await res.json() as {
-        matched?: number; contacts?: ImportEntry[]; processed?: number; message?: string; error?: string;
-      };
-      if (!res.ok) { setErrMsg(data.error ?? 'Error al importar'); return; }
 
-      const matched   = data.matched ?? 0;
-      const contacts  = data.contacts ?? [];
+      let data: { matched?: number; contacts?: ImportEntry[]; processed?: number; message?: string; error?: string; debug?: unknown };
+      try {
+        data = await res.json() as typeof data;
+      } catch {
+        setErrMsg(`Error del servidor (${res.status}): respuesta no válida`);
+        return;
+      }
+
+      if (!res.ok) { setErrMsg(data.error ?? `Error ${res.status}`); return; }
+
+      const matched  = data.matched ?? 0;
+      const contacts = data.contacts ?? [];
       setResult({ matched, contacts });
 
       if (matched > 0) {
         setHistory(prev => [{ date: new Date().toLocaleString('es-ES'), matched, contacts }, ...prev.slice(0, 9)]);
       }
-    } catch {
-      setErrMsg('Error al leer el archivo');
+    } catch (e) {
+      setErrMsg(`Error de red: ${String(e)}`);
     } finally {
       setLoading(false);
       if (fileRef.current) fileRef.current.value = '';
