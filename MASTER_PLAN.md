@@ -2,7 +2,7 @@
 
 ## Estado general
 Última actualización: 2026-05-15
-Versión en producción: `d0fbcfb` — smart summary + split notes by life area
+Versión en producción: `e27e4c7` — Phase 5 completa (23-27)
 
 **Nota 2026-05-15 (última sesión):** Módulo 22 — Security Layer + Privacy Controls. RLS verificado en todas las tablas, audit_log creado. Rate limiting Supabase (20 AI calls/hora) + plan limits (free: 5 briefings total, individual/pro: 50/mes) wired en /api/briefing, /api/signals/capture, /api/human-state. GDPR: GET /api/user/export (ZIP con 9 JSONs) y DELETE /api/user/me (con confirm:true, cascade). Migraciones pendientes de aplicar: 000005-000008.
 
@@ -17,9 +17,9 @@ Versión en producción: `d0fbcfb` — smart summary + split notes by life area
 
 ## Progreso general
 ```
-██████████████████████████ 22/22 módulos completados (100%)
+███████████████████████████████ 27/27 módulos completados (100%)
 ```
-✅ Completo: 22 | 🔄 Parcial: 0 | ⬜ Pendiente: 0
+✅ Completo: 27 | 🔄 Parcial: 0 | ⬜ Pendiente: 0
 
 ---
 
@@ -419,6 +419,67 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 - [x] Plan limits: free 5 total, individual/pro 50/mes
 - [x] GDPR export: ZIP descargable con toda la data
 - [x] GDPR delete: eliminación permanente con confirmación
+
+---
+
+### 23 — Fix Calidad (Phase 5)
+**Estado:** ✅ Completo
+**Commit:** `cd09f74` (2026-05-15)
+**Descripción:** Mejoras de calidad en el análisis de screenshots y visualización de señales.
+**Componentes:**
+- Prompt SYSTEM de `analyze-screenshot` abre con instrucción explícita: "ALWAYS respond in Spanish"
+- `SIGNAL_LABELS` map en `/red/[slug]/page.tsx` traduce tipos raw (job_change, promotion…) a español legible
+- Sidebar: `/settings` → `/config` route corregida
+- `/config` page: nombre, idioma, timezone, DND, push/email toggles, logout
+
+---
+
+### 24 — Global Search (Phase 5)
+**Estado:** ✅ Completo
+**Commit:** `cd09f74` (2026-05-15)
+**Descripción:** Búsqueda global con Cmd+K en toda la aplicación web.
+**Componentes:**
+- GET `/api/search?q=` — busca people (name/role/org), memories (content), signals (action_recommendation), max 5 por tipo
+- `SearchModal.tsx` — modal full-screen con 300ms debounce, skeleton loading, Escape para cerrar, secciones separadas por tipo
+- Sidebar: botón "Buscar…" con badge ⌘K + `useEffect` global para Cmd+K / Ctrl+K
+
+---
+
+### 25 — Landing Page Pública (Phase 5)
+**Estado:** ✅ Completo
+**Commit:** `cd09f74` (2026-05-15)
+**Descripción:** Landing page completa en `/` para usuarios no autenticados.
+**Componentes:**
+- Hero section (52px, 2 CTAs), 3 features cards, "Cómo funciona" (3 pasos), Pricing (3 planes: Individual $19, Executive $49, Teams $39/usr), Footer
+- Usuarios autenticados → redirect `/inicio`
+- Middleware: auth-on-auth-route redirect corregido `/dashboard` → `/inicio`
+
+---
+
+### 26 — Mobile Completo (Phase 5)
+**Estado:** ✅ Completo
+**Commit:** `d3dd778` (2026-05-15)
+**Descripción:** App móvil completamente funcional con 5 tabs y briefing en perfil.
+**Componentes:**
+- `estado.tsx` — emoji mood picker, energy 1-10, physical/emotional tags, haptic feedback (try/catch graceful si expo-haptics no instalado)
+- `senales.tsx` — FlatList de señales + RefreshControl, FAB modal → POST `/api/signals/capture`
+- `config.tsx` — logout vía `supabase.auth.signOut()` + `clearSession()`
+- `_layout.tsx` — 5 tabs: Inicio | Red | Señales | Estado | Config; state+memories con `href: null`
+- `index.tsx` — route `/(tabs)/state` → `/(tabs)/estado`
+- `person/[id].tsx` — botón "Generar Briefing IA" → POST `/api/briefing`, muestra resultado + indicador de costo
+
+---
+
+### 27 — AI Cost Dashboard Mejorado (Phase 5)
+**Estado:** ✅ Completo
+**Commit:** `e27e4c7` (2026-05-15)
+**Descripción:** Admin `/ai-usage` con alertas, tendencia 7 días y exportación CSV.
+**Componentes:**
+- Banner de alerta rojo cuando costo diario > $1
+- Gráfico de barras 7 días (CSS puro, día actual destacado en índigo)
+- Top users: columna `% Límite` con badge (verde/ámbar/rojo según % del presupuesto del plan)
+- `ExportButton.tsx` (client component) → descarga `/api/ai-usage/export` como CSV (últimas 1000 filas)
+- `GET /api/ai-usage/export/route.ts` — genera CSV con headers correctos y `Content-Disposition`
 
 ---
 
