@@ -5,12 +5,16 @@
   "outputDirectory": ".next",
   "crons": [
     {
+      "path": "/api/neo4j/sync",
+      "schedule": "0 2 * * *"
+    },
+    {
       "path": "/api/notifications/engine",
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/neo4j/sync",
-      "schedule": "0 2 * * *"
+      "path": "/api/rituals/engine",
+      "schedule": "0 9 * * *"
     }
   ]
 }
