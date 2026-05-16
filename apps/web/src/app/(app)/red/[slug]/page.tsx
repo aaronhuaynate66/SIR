@@ -151,27 +151,8 @@ export default async function PersonPage({ params }: { params: { slug: string } 
     ? db.from('people').select('*').eq('id', params.slug).eq('user_id', user.id).maybeSingle()
     : db.from('people').select('*').eq('slug', params.slug).eq('user_id', user.id).maybeSingle();
 
-  const [{ data: personData }, { data: relData }, { data: memoriesData }, { data: briefingsData }, { data: signalData }] = await Promise.all([
+  const [{ data: personData }] = await Promise.all([
     personQuery,
-    // relationships and signals use person.id — resolved after personQuery
-    db.from('relationships').select('*').eq('user_id', user.id).maybeSingle(), // placeholder — overridden below
-    db.from('memories')
-      .select('id, layer, content, importance, created_at')
-      .eq('user_id', user.id)
-      .not('layer', 'in', '("sensory","working")')
-      .is('expires_at', null)
-      .order('created_at', { ascending: false })
-      .limit(40),
-    db.from('briefings')
-      .select('id, content, input_tokens, output_tokens, cost_usd, created_at')
-      .eq('user_id', user.id)  // placeholder — overridden below
-      .order('created_at', { ascending: false })
-      .limit(5),
-    db.from('signals')
-      .select('type, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1),
   ]);
 
   if (!personData) notFound();
@@ -180,15 +161,22 @@ export default async function PersonPage({ params }: { params: { slug: string } 
   const person0 = personData as DbPerson;
   if (isUuid && person0.slug) redirect(`/red/${person0.slug}`);
 
-  // Re-fetch relationship-scoped data now that we have person.id
+  // Fetch all person-scoped data now that we have person.id
   const personId = person0.id;
-  const [{ data: relData2 }, { data: briefingsData2 }, { data: signalData2 }] = await Promise.all([
+  const [{ data: relData2 }, { data: briefingsData2 }, { data: signalData2 }, { data: memoriesData }] = await Promise.all([
     db.from('relationships').select('*').eq('person_id', personId).eq('user_id', user.id).maybeSingle(),
     db.from('briefings').select('id, content, input_tokens, output_tokens, cost_usd, created_at').eq('person_id', personId).order('created_at', { ascending: false }).limit(5),
     db.from('signals').select('type, created_at').eq('user_id', user.id).contains('payload', { person_id: personId }).order('created_at', { ascending: false }).limit(1),
+    db.from('memories')
+      .select('id, layer, content, importance, created_at')
+      .eq('user_id', user.id)
+      .eq('person_id', personId)
+      .not('layer', 'in', '("sensory","working")')
+      .is('expires_at', null)
+      .order('importance', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(20),
   ]);
-
-  void relData; void briefingsData; void signalData; // unused first-pass placeholders
 
   const person   = person0;
   const rel      = relData2    as DbRelationship | null;
@@ -199,11 +187,7 @@ export default async function PersonPage({ params }: { params: { slug: string } 
     ? Math.round(rel.strength * 0.4 + rel.reciprocity * 0.3 + rel.trust_score * 100 * 0.3)
     : null;
 
-  const nameLower = person.name.toLowerCase();
-  const allMemories = (memoriesData ?? []) as Array<{ id: string; layer: string; content: string; importance: number; created_at: string }>;
-  const personMemories = allMemories
-    .filter(m => m.content.toLowerCase().includes(nameLower))
-    .slice(0, 12);
+  const personMemories = (memoriesData ?? []) as Array<{ id: string; layer: string; content: string; importance: number; created_at: string }>;
 
   trackServerEvent(user.id, EVENTS.PERSON_VIEWED, {
     person_id:      personId,
