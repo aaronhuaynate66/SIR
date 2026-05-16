@@ -3,6 +3,7 @@ import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import GoogleCard from './GoogleCard';
 import GmailCard from './GmailCard';
 import WhatsAppCard from './WhatsAppCard';
+import OutlookCard from './OutlookCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,18 +17,33 @@ interface GoogleIntegrationRow {
   gmail_last_sync_at: string | null;
 }
 
+interface MicrosoftIntegrationRow {
+  access_token:    string | null;
+  last_sync_at:    string | null;
+  contacts_synced: number;
+  events_synced:   number;
+}
+
 export default async function IntegracionesPage() {
   const user = await getAuthUser();
   if (!user) redirect('/login');
 
-  const { data } = await getServiceClient()
-    .from('google_integrations')
-    .select('access_token, scopes, last_sync_at, contacts_synced, events_synced, emails_synced, gmail_last_sync_at')
-    .eq('user_id', user.id)
-    .single();
+  const db = getServiceClient();
 
-  const row = data as GoogleIntegrationRow | null;
-  const scopes = row?.scopes ?? [];
+  const [{ data: gData }, { data: msData }] = await Promise.all([
+    db.from('google_integrations')
+      .select('access_token, scopes, last_sync_at, contacts_synced, events_synced, emails_synced, gmail_last_sync_at')
+      .eq('user_id', user.id)
+      .single(),
+    db.from('microsoft_integrations')
+      .select('access_token, last_sync_at, contacts_synced, events_synced')
+      .eq('user_id', user.id)
+      .single(),
+  ]);
+
+  const gRow  = gData  as GoogleIntegrationRow    | null;
+  const msRow = msData as MicrosoftIntegrationRow | null;
+  const scopes = gRow?.scopes ?? [];
 
   return (
     <div style={{ maxWidth: 640 }}>
@@ -41,23 +57,30 @@ export default async function IntegracionesPage() {
       </div>
 
       <GoogleCard
-        connected={!!row?.access_token}
-        lastSyncAt={row?.last_sync_at ?? null}
-        contactsSynced={row?.contacts_synced ?? 0}
-        eventsSynced={row?.events_synced ?? 0}
+        connected={!!gRow?.access_token}
+        lastSyncAt={gRow?.last_sync_at ?? null}
+        contactsSynced={gRow?.contacts_synced ?? 0}
+        eventsSynced={gRow?.events_synced ?? 0}
       />
 
       <GmailCard
         connected={scopes.includes('gmail.readonly')}
-        emailsSynced={row?.emails_synced ?? 0}
-        lastSyncAt={row?.gmail_last_sync_at ?? null}
+        emailsSynced={gRow?.emails_synced ?? 0}
+        lastSyncAt={gRow?.gmail_last_sync_at ?? null}
+      />
+
+      <OutlookCard
+        connected={!!msRow?.access_token}
+        lastSyncAt={msRow?.last_sync_at ?? null}
+        contactsSynced={msRow?.contacts_synced ?? 0}
+        eventsSynced={msRow?.events_synced ?? 0}
       />
 
       <WhatsAppCard />
 
       {/* Coming soon */}
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {(['Outlook', 'iCloud Contacts'] as const).map(name => (
+        {(['iCloud Contacts'] as const).map(name => (
           <div key={name} style={{
             background: '#1a1d27',
             border: '1px solid #2a2d3e',
