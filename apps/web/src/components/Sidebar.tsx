@@ -23,8 +23,9 @@ function buildNav(unreadCount: number): NavItem[] {
     { href: '/memorias',      label: 'Memorias',  icon: '◈' },
     { href: '/estado',        label: 'Estado',    icon: '◉' },
     { href: '/executive',     label: 'Executive', icon: '◈', pro: true },
-    { href: '/notifications', label: 'Alertas',   icon: '🔔', ...(unreadCount > 0 ? { badge: unreadCount } : {}) },
-    { href: '/config',        label: 'Config',    icon: '⚙' },
+    { href: '/notifications',    label: 'Alertas',       icon: '🔔', ...(unreadCount > 0 ? { badge: unreadCount } : {}) },
+    { href: '/config/integraciones', label: 'Integraciones', icon: '🔗' },
+    { href: '/config',               label: 'Config',        icon: '⚙' },
   ];
 }
 

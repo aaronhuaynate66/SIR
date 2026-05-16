@@ -119,17 +119,45 @@ export default async function PeoplePage({
       </div>
 
       {people.length === 0 ? (
-        <div style={{ background: '#1a1d27', border: '1px dashed #2a2d3e', borderRadius: 14, padding: 48, textAlign: 'center' }}>
-          <p style={{ color: '#475569', fontSize: 16, marginBottom: 8 }}>
-            {activeFilter !== 'all' ? `Sin contactos de tipo "${REL_TYPE_LABELS[activeFilter as PersonRelationshipType]}".` : 'No hay personas registradas todavía.'}
-          </p>
-          <p style={{ color: '#334155', fontSize: 13 }}>
-            {activeFilter !== 'all' ? (
-              <Link href="/red" style={{ color: '#818cf8', textDecoration: 'none' }}>Ver todos los contactos →</Link>
-            ) : (
-              'Crea tu primer contacto con el botón de arriba.'
-            )}
-          </p>
+        <div>
+          {activeFilter === 'all' && (
+            <Link href="/config/integraciones" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#1a1d27',
+              border: '1px solid #6366f1',
+              borderRadius: 12,
+              padding: '14px 20px',
+              textDecoration: 'none',
+              marginBottom: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 22 }}>G</span>
+                <div>
+                  <p style={{ color: '#e2e8f0', fontWeight: 600, margin: '0 0 2px', fontSize: 14 }}>
+                    Importa tus contactos de Google en un click
+                  </p>
+                  <p style={{ color: '#64748b', fontSize: 12, margin: 0 }}>
+                    Conecta Google Contacts y Calendar para poblar tu red automáticamente
+                  </p>
+                </div>
+              </div>
+              <span style={{ color: '#818cf8', fontSize: 18 }}>→</span>
+            </Link>
+          )}
+          <div style={{ background: '#1a1d27', border: '1px dashed #2a2d3e', borderRadius: 14, padding: 48, textAlign: 'center' }}>
+            <p style={{ color: '#475569', fontSize: 16, marginBottom: 8 }}>
+              {activeFilter !== 'all' ? `Sin contactos de tipo "${REL_TYPE_LABELS[activeFilter as PersonRelationshipType]}".` : 'No hay personas registradas todavía.'}
+            </p>
+            <p style={{ color: '#334155', fontSize: 13 }}>
+              {activeFilter !== 'all' ? (
+                <Link href="/red" style={{ color: '#818cf8', textDecoration: 'none' }}>Ver todos los contactos →</Link>
+              ) : (
+                'Crea tu primer contacto con el botón de arriba.'
+              )}
+            </p>
+          </div>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
