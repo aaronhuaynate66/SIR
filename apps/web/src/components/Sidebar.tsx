@@ -22,7 +22,7 @@ function buildNav(unreadCount: number): NavItem[] {
     { href: '/estado',        label: 'Estado',    icon: '◉' },
     { href: '/executive',     label: 'Executive', icon: '◈', pro: true },
     { href: '/notifications', label: 'Alertas',   icon: '🔔', ...(unreadCount > 0 ? { badge: unreadCount } : {}) },
-    { href: '/settings',      label: 'Config',    icon: '⚙' },
+    { href: '/config',        label: 'Config',    icon: '⚙' },
   ];
 }
 

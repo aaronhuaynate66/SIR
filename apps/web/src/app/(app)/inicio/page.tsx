@@ -60,6 +60,7 @@ async function getDashboardData(userId: string) {
     signalsRecent,
     relsRes,
     opportunitiesRes,
+    userRes,
   ] = await Promise.all([
     db.from('memories').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     db.from('signals').select('*', { count: 'exact', head: true }).eq('user_id', userId),
@@ -87,6 +88,10 @@ async function getDashboardData(userId: string) {
       .not('signal_type', 'is', null)
       .order('opportunity_score', { ascending: false })
       .limit(3),
+    db.from('users')
+      .select('onboarding_completed')
+      .eq('id', userId)
+      .single(),
   ]);
 
   // Build advisor suggestions locally (same algorithm as /api/advisor)
@@ -160,17 +165,20 @@ async function getDashboardData(userId: string) {
     relTypeBreakdown[t] = (relTypeBreakdown[t] ?? 0) + 1;
   }
 
+  const onboardingCompleted = (userRes.data as { onboarding_completed?: boolean } | null)?.onboarding_completed ?? true;
+
   return {
-    totalMemories:    memoriesRes.count  ?? 0,
-    totalSignals:     signalsRes.count   ?? 0,
-    signalsThisWeek:  weekSignalsRes.count ?? 0,
-    totalPeople:      people.length,
+    totalMemories:      memoriesRes.count  ?? 0,
+    totalSignals:       signalsRes.count   ?? 0,
+    signalsThisWeek:    weekSignalsRes.count ?? 0,
+    totalPeople:        people.length,
     humanState,
-    recentSignals:    (signalsRecent.data ?? []) as DbSignal[],
+    recentSignals:      (signalsRecent.data ?? []) as DbSignal[],
     suggestions,
-    userAvailable:    humanState ? humanState.availability_score >= 50 : true,
+    userAvailable:      humanState ? humanState.availability_score >= 50 : true,
     opportunities,
     relTypeBreakdown,
+    onboardingCompleted,
   };
 }
 
@@ -179,6 +187,11 @@ export default async function DashboardPage() {
   if (!user) redirect('/login');
 
   const data = await getDashboardData(user.id);
+
+  // Redirect new users to onboarding
+  if (data.totalPeople === 0 && !data.onboardingCompleted) {
+    redirect('/onboarding');
+  }
   const todayStr = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
@@ -215,9 +228,10 @@ export default async function DashboardPage() {
           <Link href="/estado" style={{
             padding: '9px 16px', background: '#1a1d27',
             border: '1px dashed #2a2d3e', borderRadius: 10,
-            textDecoration: 'none', fontSize: 13, color: '#64748b',
+            textDecoration: 'none', fontSize: 13, color: '#818cf8',
+            fontWeight: 600,
           }}>
-            ¿Cómo te sientes hoy? →
+            ¿Cómo estás hoy? →
           </Link>
         )}
       </div>
@@ -392,7 +406,14 @@ export default async function DashboardPage() {
           <h2 style={{ fontSize: 15, fontWeight: 600, color: '#e2e8f0', margin: '0 0 14px' }}>Señales recientes</h2>
           {data.recentSignals.length === 0 ? (
             <div style={emptyCard}>
-              <p style={{ color: '#475569', fontSize: 14, margin: 0 }}>Sin señales aún.</p>
+              <p style={{ color: '#475569', fontSize: 13, margin: '0 0 10px' }}>Sin señales aún.</p>
+              <Link href="/senales" style={{
+                display: 'inline-block', padding: '7px 14px',
+                background: '#1e2130', border: '1px solid #2a2d3e',
+                borderRadius: 7, fontSize: 13, color: '#818cf8', textDecoration: 'none',
+              }}>
+                Registra tu primera señal →
+              </Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -425,9 +446,16 @@ export default async function DashboardPage() {
           </div>
           {data.suggestions.length === 0 && data.totalPeople === 0 ? (
             <div style={emptyCard}>
-              <p style={{ color: '#475569', fontSize: 14, margin: 0 }}>
-                No hay personas aún. <Link href="/red" style={{ color: '#818cf8', textDecoration: 'none' }}>Crea un contacto →</Link>
+              <p style={{ color: '#475569', fontSize: 13, margin: '0 0 10px' }}>
+                No hay personas aún.
               </p>
+              <Link href="/red" style={{
+                display: 'inline-block', padding: '7px 14px',
+                background: '#6366f1', border: 'none',
+                borderRadius: 7, fontSize: 13, color: '#fff', textDecoration: 'none', fontWeight: 600,
+              }}>
+                Agrega tu primera persona →
+              </Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
