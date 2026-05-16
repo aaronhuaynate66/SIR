@@ -14,7 +14,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 interface Props { initial: ProfilePrefs }
 
-export default function ConfigForm({ initial }: Props) {
+export default function ConfigForm({ initial }: Props): JSX.Element {
   const router = useRouter();
   const [form, setForm] = useState<ProfilePrefs>(initial);
   const [saved, setSaved]    = useState(false);
