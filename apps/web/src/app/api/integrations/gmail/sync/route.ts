@@ -111,6 +111,7 @@ export async function POST(): Promise<Response> {
   // Track email updates needed for name-matched people without email in DB
   const emailUpdates = new Map<string, string>(); // personId → email
   const senderEmails = new Set<string>(); // collected for debug
+  let matchesFound = 0;
 
   // List messages from last 6 months (max 200)
   const sixMonthsAgo = new Date();
@@ -169,6 +170,7 @@ export async function POST(): Promise<Response> {
       const personEntry = emailToPersonId.get(cEmail)
         ?? nameToPersonId.get(normalizeName(cName));
       if (!personEntry) continue;
+      matchesFound++;
 
       // If matched by name and person has no email yet, queue an update
       if (!personEntry.hasEmail && !emailUpdates.has(personEntry.id)) {
@@ -212,7 +214,17 @@ export async function POST(): Promise<Response> {
   }
 
   if (contactMap.size === 0) {
-    return Response.json({ emails_processed: msgIds.length, contacts_analyzed: 0, email_backfills: emailUpdates.size });
+    return Response.json({
+      emails_processed: msgIds.length,
+      contacts_analyzed: 0,
+      email_backfills: emailUpdates.size,
+      debug: {
+        unique_senders: Array.from(senderEmails).slice(0, 10),
+        people_with_email_sample: Array.from(emailToPersonId.keys()).slice(0, 10),
+        people_with_name_sample: Array.from(nameToPersonId.keys()).slice(0, 10),
+        matches_found: matchesFound,
+      },
+    });
   }
 
   // Claude Haiku analysis for all matched contacts in one call
@@ -310,5 +322,15 @@ export async function POST(): Promise<Response> {
     gmail_last_sync_at:  new Date().toISOString(),
   }).eq('user_id', user.id);
 
-  return Response.json({ emails_processed: msgIds.length, contacts_analyzed: contactsAnalyzed, email_backfills: emailUpdates.size });
+  return Response.json({
+    emails_processed: msgIds.length,
+    contacts_analyzed: contactsAnalyzed,
+    email_backfills: emailUpdates.size,
+    debug: {
+      unique_senders: Array.from(senderEmails).slice(0, 10),
+      people_with_email_sample: Array.from(emailToPersonId.keys()).slice(0, 10),
+      people_with_name_sample: Array.from(nameToPersonId.keys()).slice(0, 10),
+      matches_found: matchesFound,
+    },
+  });
 }
