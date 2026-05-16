@@ -7,6 +7,7 @@ import InteractionForm from './InteractionForm';
 import RelationshipTypeEditor from './RelationshipTypeEditor';
 import ScreenshotAnalyzer from './ScreenshotAnalyzer';
 import PersonProfileCards from './PersonProfileCards';
+import SpecialDates from './SpecialDates';
 import type { DbPerson, DbRelationship, PersonRelationshipType } from '@sir/db';
 
 export const dynamic = 'force-dynamic';
@@ -343,6 +344,9 @@ export default async function PersonPage({ params }: { params: { slug: string } 
           <div style={{ marginBottom: 16 }}>
             <VoiceNote personId={person.id} />
           </div>
+
+          {/* Special dates */}
+          <SpecialDates personId={person.id} />
 
           {/* Register interaction */}
           <InteractionForm personId={person.id} personName={person.name} />

@@ -20,7 +20,7 @@ export async function POST(req: Request): Promise<Response> {
   const todayStr = now.toISOString().slice(0, 10);
 
   for (const { id: userId } of users as Array<{ id: string }>) {
-    const [peopleRes, relsRes, signalsRes] = await Promise.all([
+    const [peopleRes, relsRes, signalsRes, datesRes] = await Promise.all([
       db.from('people').select('id, name, birthday, anniversary, slug').eq('user_id', userId),
       db.from('relationships').select('person_id, strength, last_contact_at, contact_frequency_days').eq('user_id', userId),
       db.from('signals')
@@ -28,15 +28,18 @@ export async function POST(req: Request): Promise<Response> {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(500),
+      db.from('people_dates').select('person_id, label, date, recurring').eq('user_id', userId),
     ]);
 
     type PersonRow = { id: string; name: string; birthday: string | null; anniversary: string | null; slug: string };
     type RelRow    = { person_id: string; strength: number; last_contact_at: string | null; contact_frequency_days: number | null };
     type SigRow    = { person_id: string | null; type: string; payload: Record<string, unknown>; created_at: string };
+    type DateRow   = { person_id: string; label: string; date: string; recurring: boolean };
 
-    const people  = (peopleRes.data  ?? []) as PersonRow[];
-    const rels    = (relsRes.data    ?? []) as RelRow[];
-    const signals = (signalsRes.data ?? []) as SigRow[];
+    const people   = (peopleRes.data  ?? []) as PersonRow[];
+    const rels     = (relsRes.data    ?? []) as RelRow[];
+    const signals  = (signalsRes.data ?? []) as SigRow[];
+    const peopleDates = (datesRes.data ?? []) as DateRow[];
 
     const relMap = new Map(rels.map(r => [r.person_id, r]));
 
@@ -142,7 +145,30 @@ export async function POST(req: Request): Promise<Response> {
         );
       }
 
-      // 6. Relationship strength declining (if strength < 40 and there are interactions recorded)
+      // 6. Custom dates in 14 days
+      for (const pd of peopleDates.filter(d => d.person_id === person.id)) {
+        const dateObj = new Date(pd.date + 'T00:00:00');
+        let next: Date;
+        if (pd.recurring) {
+          next = new Date(now.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+          if (next.getTime() < now.getTime() - 86_400_000)
+            next = new Date(next.getFullYear() + 1, dateObj.getMonth(), dateObj.getDate());
+        } else {
+          next = dateObj;
+        }
+        const days = Math.ceil((next.getTime() - now.getTime()) / 86_400_000);
+        if (days >= 0 && days <= 14) {
+          addSuggestion(person.id, `custom_date_${pd.label.slice(0,20)}`,
+            days === 0
+              ? `Hoy es "${pd.label}" con ${person.name}`
+              : `En ${days} día${days !== 1 ? 's' : ''} — "${pd.label}" con ${person.name}`,
+            'Recuérdalo con un gesto especial',
+            days <= 1 ? 9 : days <= 7 ? 7 : 6
+          );
+        }
+      }
+
+      // 7. Relationship strength declining (if strength < 40 and there are interactions recorded)
       if (rel && (rel.strength ?? 0) < 40 && (rel.strength ?? 0) > 10) {
         const hasSignals = signals.some(s => s.person_id === person.id);
         if (hasSignals) {
