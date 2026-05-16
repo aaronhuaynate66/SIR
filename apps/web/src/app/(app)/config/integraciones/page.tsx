@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import GoogleCard from './GoogleCard';
 import GmailCard from './GmailCard';
+import WhatsAppCard from './WhatsAppCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,9 +53,11 @@ export default async function IntegracionesPage() {
         lastSyncAt={row?.gmail_last_sync_at ?? null}
       />
 
+      <WhatsAppCard />
+
       {/* Coming soon */}
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {(['WhatsApp Export', 'Outlook', 'iCloud Contacts'] as const).map(name => (
+        {(['Outlook', 'iCloud Contacts'] as const).map(name => (
           <div key={name} style={{
             background: '#1a1d27',
             border: '1px solid #2a2d3e',
