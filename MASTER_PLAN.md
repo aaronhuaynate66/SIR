@@ -17,9 +17,9 @@ Versión en producción: `e27e4c7` — Phase 5 completa (23-27)
 
 ## Progreso general
 ```
-███████████████████████████████ 27/27 módulos completados (100%)
+████████████████████████████░░░░░░░░ 28/36 módulos completados (78%)
 ```
-✅ Completo: 27 | 🔄 Parcial: 0 | ⬜ Pendiente: 0
+✅ Completo: 28 | 🔄 Parcial: 0 | ⬜ Pendiente: 8
 
 ---
 
@@ -483,6 +483,79 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 
 ---
 
+---
+
+## Phase 6 — Integraciones & Growth (Módulos 28-36)
+
+### 28 — Google Contacts + Calendar Integration (Phase 6)
+**Estado:** ✅ Completo
+**Commit:** `dabbc52` (2026-05-15)
+**Descripción:** Integración completa con Google Contacts y Google Calendar.
+**Componentes:**
+- `GET /api/integrations/google/connect` — OAuth2 authorize redirect (contacts.readonly + calendar.readonly, offline access)
+- `GET /api/integrations/google/callback` — code exchange → upsert `google_integrations`, state CSRF via base64url(userId)
+- `POST /api/integrations/google/sync-contacts` — Google People API paginado, dedup by email+name, patch-only-empty fields
+- `POST /api/integrations/google/sync-calendar` — últimos 6 meses, crea signals + strength +5/reunión (max 100)
+- `DELETE /api/integrations/google/disconnect` — revoke at Google + delete row
+- `_lib.ts` — `getValidToken()` con auto-refresh, `getCallbackUrl()`, `GoogleIntegration` type
+- `/config/integraciones/page.tsx` — server component muestra estado, stats, `GoogleCard`
+- `GoogleCard.tsx` — client component: Connect link, Sync Now (paralelo contacts+calendar), Disconnect
+- `Sidebar.tsx` — link Integraciones añadido
+- `/red/page.tsx` — banner Google import en empty state
+- SQL: `google_integrations` table con RLS (`20260516000001_google_integrations.sql`)
+**Env vars requeridas:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL`
+**Google Cloud Console:** APIs habilitadas: People API + Calendar API v3. OAuth redirect URI: `{APP_URL}/api/integrations/google/callback`
+
+---
+
+### 29 — Stripe Webhooks + Subscriptions ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Webhook handler para `customer.subscription.*` events, actualizar `plan` en users table, portal de cliente Stripe.
+
+---
+
+### 30 — RevenueCat Mobile Subscriptions ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Integración RevenueCat para iOS/Android, paywalls nativos, sync con Supabase.
+
+---
+
+### 31 — Onboarding Flow ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Wizard post-signup: nombre → primer contacto → conectar Google → primer briefing. Progress indicator 4 pasos.
+
+---
+
+### 32 — Email Weekly Digest Cron ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Vercel cron lunes 8am → genera digest personalizado por usuario → envía via Resend.
+
+---
+
+### 33 — Push Notifications Mobile ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Expo push tokens → recordatorios de contacto, alertas de señales importantes.
+
+---
+
+### 34 — Neo4j Graph Sync ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Sync bidireccional Supabase ↔ Neo4j, queries Cypher para caminos relacionales, grafo expandido.
+
+---
+
+### 35 — Custom Domain + SSL ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Configurar dominio propio en Vercel, certificado SSL automático, redirects www→apex.
+
+---
+
+### 36 — Analytics & Monitoring ⬜ Pendiente
+**Estado:** ⬜ Pendiente
+**Descripción:** Sentry errores, Vercel Analytics eventos, Uptime monitoring, alertas Slack.
+
+---
+
 ## Infraestructura
 | Item | Estado | Notas |
 |------|--------|-------|
@@ -491,6 +564,7 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 | sir-admin.vercel.app | ✅ Live | Next.js 14, pnpm workspaces |
 | Supabase | ✅ Activo | pgvector, RLS, 8 tablas |
 | Neo4j AuraDB | 🔄 Parcial | cliente listo, sync pendiente |
+| Google OAuth | ✅ Activo | Contacts + Calendar integration |
 
 ---
 
