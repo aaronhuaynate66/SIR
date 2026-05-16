@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import BriefingButton, { type BriefingRecord } from '@/components/BriefingButton';
+import VoiceNote from '@/components/VoiceNote';
 import { trackServerEvent, EVENTS } from '@sir/analytics';
 import InteractionForm from './InteractionForm';
 import RelationshipTypeEditor from './RelationshipTypeEditor';
@@ -337,6 +338,11 @@ export default async function PersonPage({ params }: { params: { slug: string } 
               relationship_type: person.relationship_type,
             }}
           />
+
+          {/* Voice note */}
+          <div style={{ marginBottom: 16 }}>
+            <VoiceNote personId={person.id} />
+          </div>
 
           {/* Register interaction */}
           <InteractionForm personId={person.id} personName={person.name} />

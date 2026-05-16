@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import type { SocialSignalType } from '@sir/db';
 import CaptureForm from './CaptureForm';
+import VoiceNote from '@/components/VoiceNote';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,8 +112,11 @@ export default async function SignalsPage({
         </span>
       </div>
 
-      {/* Capture form */}
-      <CaptureForm />
+      {/* Capture form + Voice note */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 4 }}>
+        <div style={{ flex: 1 }}><CaptureForm /></div>
+        <VoiceNote />
+      </div>
 
       {/* Type filter tabs */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
