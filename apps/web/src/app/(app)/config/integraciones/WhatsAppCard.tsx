@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { createClient } from '@/lib/supabase-browser';
 
 interface ImportEntry {
   contact: string;
@@ -14,21 +15,9 @@ interface HistoryItem {
   contacts: ImportEntry[];
 }
 
-function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      // Truncate to 3MB to stay under Vercel's 4.5MB body limit
-      resolve(result.length > 3_000_000 ? result.substring(0, 3_000_000) : result);
-    };
-    reader.onerror = () => reject(new Error(`FileReader error: ${reader.error?.message ?? 'unknown'}`));
-    reader.readAsText(file, 'utf-8');
-  });
-}
-
 export default function WhatsAppCard() {
   const [loading,      setLoading]      = useState(false);
+  const [status,       setStatus]       = useState('');
   const [result,       setResult]       = useState<{ matched: number; contacts: ImportEntry[] } | null>(null);
   const [errMsg,       setErrMsg]       = useState('');
   const [history,      setHistory]      = useState<HistoryItem[]>([]);
@@ -41,23 +30,37 @@ export default function WhatsAppCard() {
     if (!file) return;
 
     setLoading(true);
+    setStatus('Subiendo archivo…');
     setErrMsg('');
     setResult(null);
 
-    let content: string;
-    try {
-      content = await readFileAsText(file);
-    } catch (e) {
-      setErrMsg(`Error al leer el archivo: ${String(e)}`);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setErrMsg('No autenticado');
       setLoading(false);
       return;
     }
+
+    // Upload directly to Supabase Storage — no Vercel body limit
+    const storagePath = `${user.id}/${Date.now()}-chat.txt`;
+    const { error: uploadError } = await supabase.storage
+      .from('whatsapp-exports')
+      .upload(storagePath, file, { contentType: 'text/plain', upsert: true });
+
+    if (uploadError) {
+      setErrMsg(`Error al subir archivo: ${uploadError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    setStatus('Procesando…');
 
     try {
       const res = await fetch('/api/integrations/whatsapp/import', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ content, userDisplayName: userName }),
+        body:    JSON.stringify({ storage_path: storagePath, userDisplayName: userName }),
       });
 
       let data: { matched?: number; contacts?: ImportEntry[]; processed?: number; message?: string; error?: string; debug?: unknown };
@@ -81,6 +84,7 @@ export default function WhatsAppCard() {
       setErrMsg(`Error de red: ${String(e)}`);
     } finally {
       setLoading(false);
+      setStatus('');
       if (fileRef.current) fileRef.current.value = '';
     }
   }
@@ -149,7 +153,7 @@ export default function WhatsAppCard() {
         borderRadius: 8, fontSize: 13, fontWeight: 600,
         cursor: loading ? 'not-allowed' : 'pointer',
       }}>
-        {loading ? 'Procesando…' : 'Subir archivo .txt'}
+        {loading ? (status || 'Procesando…') : 'Subir archivo .txt'}
         <input
           ref={fileRef}
           type="file"

@@ -117,23 +117,44 @@ export async function POST(req: Request): Promise<Response> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  let body: { content?: string; userDisplayName?: string };
+  const db = getServiceClient();
+
+  let body: { content?: string; storage_path?: string; userDisplayName?: string };
   try {
-    body = await req.json() as { content?: string; userDisplayName?: string };
+    body = await req.json() as { content?: string; storage_path?: string; userDisplayName?: string };
   } catch {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { content, userDisplayName = '' } = body;
-  if (!content || typeof content !== 'string') {
-    return Response.json({ error: 'content required' }, { status: 400 });
+  const { content: rawContent, storage_path, userDisplayName = '' } = body;
+
+  let content: string;
+
+  if (storage_path) {
+    // Download from Supabase Storage (service role bypasses RLS)
+    const { data: blob, error: dlError } = await db.storage
+      .from('whatsapp-exports')
+      .download(storage_path);
+
+    if (dlError || !blob) {
+      return Response.json({ error: `Storage download failed: ${dlError?.message ?? 'unknown'}` }, { status: 500 });
+    }
+
+    content = await blob.text();
+
+    // Clean up immediately after download
+    await db.storage.from('whatsapp-exports').remove([storage_path]);
+
+    console.log('[whatsapp-import] Downloaded from storage:', storage_path, content.length, 'chars');
+  } else if (rawContent && typeof rawContent === 'string') {
+    content = rawContent;
+  } else {
+    return Response.json({ error: 'storage_path or content required' }, { status: 400 });
   }
 
-  console.log('[whatsapp-import] Received:', content.length, 'chars');
+  console.log('[whatsapp-import] Processing:', content.length, 'chars');
   console.log('[whatsapp-import] First 150 chars:', JSON.stringify(content.substring(0, 150)));
   console.log('[whatsapp-import] userDisplayName:', userDisplayName);
-
-  const db = getServiceClient();
 
   // Pre-load people
   const { data: people } = await db
