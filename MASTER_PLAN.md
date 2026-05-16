@@ -2,7 +2,7 @@
 
 ## Estado general
 Última actualización: 2026-05-15
-Versión en producción: `e27e4c7` — Phase 5 completa (23-27)
+Versión en producción: `feat/analytics-monitoring` — Phase 6 completa (36/36)
 
 **Nota 2026-05-15 (última sesión):** Módulo 22 — Security Layer + Privacy Controls. RLS verificado en todas las tablas, audit_log creado. Rate limiting Supabase (20 AI calls/hora) + plan limits (free: 5 briefings total, individual/pro: 50/mes) wired en /api/briefing, /api/signals/capture, /api/human-state. GDPR: GET /api/user/export (ZIP con 9 JSONs) y DELETE /api/user/me (con confirm:true, cascade). Migraciones pendientes de aplicar: 000005-000008.
 
@@ -17,9 +17,9 @@ Versión en producción: `e27e4c7` — Phase 5 completa (23-27)
 
 ## Progreso general
 ```
-████████████████████████████████████ 35/36 módulos completados (97%)
+████████████████████████████████████ 36/36 módulos completados (100%)
 ```
-✅ Completo: 35 | 🔄 Parcial: 0 | ⬜ Pendiente: 1
+✅ Completo: 36 | 🔄 Parcial: 0 | ⬜ Pendiente: 0
 
 ---
 
@@ -589,9 +589,19 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 
 ---
 
-### 36 — Analytics & Monitoring ⬜ Pendiente
-**Estado:** ⬜ Pendiente
-**Descripción:** Sentry errores, Vercel Analytics eventos, Uptime monitoring, alertas Slack.
+### 36 — Analytics & Monitoring ✅ Completo
+**Estado:** ✅ Completo
+**Commit:** `feat/analytics-monitoring` (2026-05-15)
+**Descripción:** Sentry error tracking, Vercel Analytics + Speed Insights, health check mejorado, panel monitoring en admin.
+**Verificación:**
+- [x] @sentry/nextjs instalado y configurado (sentry.client/server/edge.config.ts)
+- [x] instrumentation.ts registra Sentry en Node.js y Edge runtime
+- [x] next.config.mjs wrapeado con withSentryConfig
+- [x] @vercel/analytics — `<Analytics />` en root layout
+- [x] @vercel/speed-insights — `<SpeedInsights />` en root layout
+- [x] /api/health retorna status detallado: supabase, neo4j, env, version, uptime
+- [x] /admin/monitoring — panel con servicios, links rápidos, errores Sentry
+- [x] Nav admin actualizado con "Monitoring"
 
 ---
 

@@ -13,6 +13,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.35.0",
     "@react-email/components": "^0.0.33",
+    "@sentry/nextjs": "^10.53.1",
     "@sir/ai": "workspace:*",
     "@sir/analytics": "workspace:^",
     "@sir/db": "workspace:*",
@@ -21,6 +22,8 @@
     "@supabase/supabase-js": "^2.47.0",
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.35.0",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "jszip": "^3.10.1",
     "next": "14.2.18",
     "react": "^18.3.0",

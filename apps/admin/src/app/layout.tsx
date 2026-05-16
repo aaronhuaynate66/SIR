@@ -4,13 +4,14 @@ export const metadata = {
 };
 
 const NAV_LINKS = [
-  { href: '/',         label: 'Dashboard' },
-  { href: '/users',    label: 'Usuarios'  },
-  { href: '/memories', label: 'Memorias'  },
-  { href: '/signals',   label: 'Señales'   },
-  { href: '/analytics', label: 'Analytics' },
-  { href: '/costs',     label: 'Costos AI'  },
-  { href: '/ai-usage',  label: 'AI Detalle' },
+  { href: '/',            label: 'Dashboard'  },
+  { href: '/users',       label: 'Usuarios'   },
+  { href: '/memories',    label: 'Memorias'   },
+  { href: '/signals',     label: 'Señales'    },
+  { href: '/analytics',   label: 'Analytics'  },
+  { href: '/costs',       label: 'Costos AI'  },
+  { href: '/ai-usage',    label: 'AI Detalle' },
+  { href: '/monitoring',  label: 'Monitoring' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
