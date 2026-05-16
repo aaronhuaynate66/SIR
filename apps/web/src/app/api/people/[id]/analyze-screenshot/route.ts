@@ -39,7 +39,8 @@ export interface AnalysisResult {
   };
 }
 
-const SYSTEM = `You are an expert at extracting structured contact information from screenshots.
+const SYSTEM = `You are a data extraction assistant. ALWAYS respond in Spanish. All text fields must be in Spanish regardless of the source language.
+
 Analyze the screenshot and return ONLY a valid JSON object — no markdown, no extra text.
 
 Detect the platform: "linkedin", "instagram", "whatsapp", or "unknown".

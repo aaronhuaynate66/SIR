@@ -52,6 +52,25 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 
 // ─── Smart Summary helpers ────────────────────────────────────────────────────
 
+const SIGNAL_LABELS: Record<string, string> = {
+  relationship:  'nueva relación',
+  job_change:    'cambio de trabajo',
+  promotion:     'promoción',
+  birthday:      'cumpleaños',
+  achievement:   'logro',
+  life_event:    'evento de vida',
+  travel:        'viaje',
+  publication:   'publicación',
+  health_event:  'evento de salud',
+  loss:          'pérdida',
+  interaction:   'interacción',
+  emotion:       'emoción registrada',
+  location:      'ubicación',
+  task:          'tarea',
+  insight:       'insight',
+  external:      'evento externo',
+};
+
 function relativeDate(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
   if (days === 0) return 'hoy';
@@ -108,7 +127,8 @@ function buildSummaryLines(
 
   // Recent signal (only if room)
   if (lastSignalType && lines.length < 3) {
-    lines.push(`📡 Señal reciente: ${lastSignalType}`);
+    const label = SIGNAL_LABELS[lastSignalType] ?? lastSignalType;
+    lines.push(`📡 Señal reciente: ${label}`);
   }
 
   return lines.slice(0, 3);
