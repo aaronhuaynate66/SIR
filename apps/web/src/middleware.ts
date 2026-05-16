@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute && user) {
     const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
+    url.pathname = '/inicio';
     return NextResponse.redirect(url);
   }
 
