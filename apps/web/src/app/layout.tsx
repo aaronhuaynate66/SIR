@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   icons: {
     apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
   },
+  verification: {
+    google: 'YI5PujeGA7rsiJdGFxcobDNYuFJG_rBPMbDiVozMp4s',
+  },
 };
 
 export const viewport: Viewport = {
