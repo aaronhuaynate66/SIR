@@ -6,6 +6,24 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useState } from 'react';
 import { usePersonDetail } from '../../src/hooks/usePersonDetail';
 import { registerInteraction } from '../../src/lib/api';
+import { getToken } from '../../src/lib/auth-store';
+
+const API_URL = process.env['EXPO_PUBLIC_API_URL'] ?? 'http://localhost:3000';
+
+async function fetchBriefing(personId: string): Promise<{ briefing: string; cost_usd?: number }> {
+  const token = getToken();
+  if (!token) throw new Error('No active session');
+  const res = await fetch(`${API_URL}/api/briefing`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ person_id: personId }),
+  });
+  if (!res.ok) {
+    const err = await res.json() as { error?: string };
+    throw new Error(err.error ?? `Error ${res.status}`);
+  }
+  return res.json() as Promise<{ briefing: string; cost_usd?: number }>;
+}
 
 const QUALITY_EMOJI  = ['💔', '😐', '🙂', '😊', '❤️'];
 const QUALITY_LABEL  = ['Mal', 'Regular', 'Bien', 'Genial', 'Excelente'];
@@ -46,11 +64,16 @@ export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { person, relationship, score, loading, refresh } = usePersonDetail(id);
 
-  const [quality,  setQuality]  = useState<number | null>(null);
-  const [notes,    setNotes]    = useState('');
-  const [saving,   setSaving]   = useState(false);
-  const [saveErr,  setSaveErr]  = useState<string | null>(null);
-  const [savedMsg, setSavedMsg] = useState(false);
+  const [quality,        setQuality]        = useState<number | null>(null);
+  const [notes,          setNotes]          = useState('');
+  const [saving,         setSaving]         = useState(false);
+  const [saveErr,        setSaveErr]        = useState<string | null>(null);
+  const [savedMsg,       setSavedMsg]       = useState(false);
+  const [briefing,       setBriefing]       = useState<string | null>(null);
+  const [briefingCost,   setBriefingCost]   = useState<number | null>(null);
+  const [loadingBrief,   setLoadingBrief]   = useState(false);
+  const [briefingErr,    setBriefingErr]    = useState<string | null>(null);
+  const [briefingOpen,   setBriefingOpen]   = useState(false);
 
   async function handleInteraction() {
     if (!quality || !person) return;
@@ -72,6 +95,22 @@ export default function PersonDetailScreen() {
       setSaveErr(e instanceof Error ? e.message : 'Error al guardar');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleBriefing() {
+    if (!person) return;
+    setLoadingBrief(true);
+    setBriefingErr(null);
+    setBriefingOpen(true);
+    try {
+      const res = await fetchBriefing(person.id);
+      setBriefing(res.briefing);
+      setBriefingCost(res.cost_usd ?? null);
+    } catch (e) {
+      setBriefingErr(e instanceof Error ? e.message : 'Error al generar briefing');
+    } finally {
+      setLoadingBrief(false);
     }
   }
 
@@ -152,6 +191,36 @@ export default function PersonDetailScreen() {
           <Text style={styles.noRelHint}>Registra una interacción para comenzar.</Text>
         </View>
       )}
+
+      {/* Briefing IA */}
+      <View style={styles.briefingSection}>
+        <TouchableOpacity
+          style={[styles.briefingBtn, loadingBrief && styles.briefingBtnLoading]}
+          onPress={handleBriefing}
+          disabled={loadingBrief}
+        >
+          {loadingBrief
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.briefingBtnText}>💡 Generar Briefing IA</Text>
+          }
+        </TouchableOpacity>
+
+        {briefingOpen && (
+          <View style={styles.briefingCard}>
+            <View style={styles.briefingCardHeader}>
+              <Text style={styles.briefingCardTitle}>Briefing</Text>
+              {briefingCost !== null && (
+                <Text style={styles.briefingCost}>${briefingCost.toFixed(4)}</Text>
+              )}
+            </View>
+            {briefingErr ? (
+              <Text style={styles.briefingErrText}>{briefingErr}</Text>
+            ) : briefing ? (
+              <Text style={styles.briefingText}>{briefing}</Text>
+            ) : null}
+          </View>
+        )}
+      </View>
 
       {/* Interaction form */}
       <View style={styles.interactionSection}>
@@ -258,6 +327,17 @@ const styles = StyleSheet.create({
   noRelCard:   { backgroundColor: '#f0f4ff', borderRadius: 14, padding: 16, alignItems: 'center' },
   noRelText:   { fontSize: 14, fontWeight: '600', color: '#4f46e5' },
   noRelHint:   { fontSize: 12, color: '#6b7280', marginTop: 4 },
+
+  briefingSection:       { gap: 12 },
+  briefingBtn:           { backgroundColor: '#6366f1', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  briefingBtnLoading:    { opacity: 0.7 },
+  briefingBtnText:       { color: '#fff', fontSize: 15, fontWeight: '700' },
+  briefingCard:          { backgroundColor: '#fff', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#c7d2fe' },
+  briefingCardHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  briefingCardTitle:     { fontSize: 15, fontWeight: '700', color: '#4f46e5' },
+  briefingCost:          { fontSize: 11, color: '#9ca3af', fontWeight: '600' },
+  briefingText:          { fontSize: 14, color: '#374151', lineHeight: 22 },
+  briefingErrText:       { fontSize: 13, color: '#ef4444' },
 
   interactionSection: { backgroundColor: '#fff', borderRadius: 16, padding: 16, gap: 10, borderWidth: 1, borderColor: '#e5e7eb' },
   fieldLabel:  { fontSize: 13, fontWeight: '600', color: '#374151' },

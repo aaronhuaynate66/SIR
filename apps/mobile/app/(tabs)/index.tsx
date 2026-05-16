@@ -37,7 +37,7 @@ function StateWidget() {
 
   if (!todayState) {
     return (
-      <TouchableOpacity style={styles.widgetPrompt} onPress={() => router.push('/(tabs)/state')}>
+      <TouchableOpacity style={styles.widgetPrompt} onPress={() => router.push('/(tabs)/estado')}>
         <Text style={styles.widgetPromptText}>¿Cómo te sientes hoy?</Text>
         <Text style={styles.widgetPromptArrow}>→</Text>
       </TouchableOpacity>
@@ -48,7 +48,7 @@ function StateWidget() {
   const emoji = MOOD_EMOJI[todayState.mood_score - 1] ?? '🙂';
 
   return (
-    <TouchableOpacity style={styles.widgetCard} onPress={() => router.push('/(tabs)/state')}>
+    <TouchableOpacity style={styles.widgetCard} onPress={() => router.push('/(tabs)/estado')}>
       <View style={[styles.widgetScore, { borderColor: color }]}>
         <Text style={[styles.widgetScoreNum, { color }]}>{todayState.composite_score}</Text>
       </View>
