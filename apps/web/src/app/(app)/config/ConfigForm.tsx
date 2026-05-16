@@ -30,13 +30,15 @@ export default function ConfigForm({ initial }: Props): JSX.Element {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    start(async () => {
-      try {
-        await updateProfileAction(form);
-        setSaved(true);
-      } catch (err) {
-        setError(String(err));
-      }
+    start(() => {
+      void (async () => {
+        try {
+          await updateProfileAction(form);
+          setSaved(true);
+        } catch (err) {
+          setError(String(err));
+        }
+      })();
     });
   }
 
