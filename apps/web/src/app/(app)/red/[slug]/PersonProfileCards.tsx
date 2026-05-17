@@ -1,23 +1,29 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import {
   updatePersonExtraFieldsAction,
   updateCycleDataAction,
   updateSensitiveContextAction,
+  confirmScreenshotAction,
 } from '@/app/(app)/actions';
+import type { AnalysisResult } from '@/app/api/people/[id]/analyze-screenshot/route';
 import type { WorkHistoryEntry, CycleData } from '@sir/db';
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
 export interface PersonCardData {
   id:                    string;
+  name:                  string;
   role:                  string | null;
   organization:          string | null;
   location:              string | null;
   education:             string | null;
   linkedin_url:          string | null;
   instagram_url:         string | null;
+  facebook_url:          string | null;
+  twitter_url:           string | null;
+  tiktok_url:            string | null;
   birthday:              string | null;
   anniversary:           string | null;
   notes:                 string | null;
@@ -186,6 +192,197 @@ function liUser(u: string): string {
   const m = u.match(/linkedin\.com\/in\/([^/?#]+)/);
   return m?.[1] ?? u;
 }
+function fbUser(u: string): string {
+  const m = u.match(/facebook\.com\/([^/?#]+)/);
+  return m?.[1] ?? u;
+}
+function twUser(u: string): string {
+  const m = u.match(/(?:twitter|x)\.com\/([^/?#]+)/);
+  return m ? `@${m[1] ?? ''}` : u;
+}
+function ttUser(u: string): string {
+  const m = u.match(/tiktok\.com\/@?([^/?#]+)/);
+  return m ? `@${m[1] ?? ''}` : u;
+}
+
+// ─── Scan helpers ─────────────────────────────────────────────────────────────
+
+const SCAN_PLATFORM_COLORS: Record<string, string> = {
+  linkedin:  '#0077b5',
+  instagram: '#e1306c',
+  facebook:  '#1877f2',
+  twitter:   '#1da1f2',
+};
+const SCAN_PLATFORM_LABELS: Record<string, string> = {
+  linkedin:  'LinkedIn',
+  instagram: 'Instagram',
+  facebook:  'Facebook',
+  twitter:   'Twitter/X',
+};
+
+function detectPlatform(url: string): string {
+  if (url.includes('linkedin'))  return 'linkedin';
+  if (url.includes('instagram')) return 'instagram';
+  if (url.includes('facebook'))  return 'facebook';
+  if (url.includes('twitter') || url.includes('x.com')) return 'twitter';
+  return 'unknown';
+}
+
+function toBase64Scan(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve((reader.result as string).split(',')[1] ?? '');
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── ScanProfilePanel ─────────────────────────────────────────────────────────
+
+const SCAN_EDITABLE_FIELDS: [keyof AnalysisResult['data'], string][] = [
+  ['role',         'Cargo'],
+  ['organization', 'Empresa'],
+  ['location',     'Ubicación'],
+  ['education',    'Educación'],
+  ['notes',        'Notas'],
+];
+
+function ScanProfilePanel({
+  personId,
+  personName,
+  url,
+  onClose,
+  onSaved,
+}: {
+  personId:   string;
+  personName: string;
+  url:        string;
+  onClose:    () => void;
+  onSaved:    () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [analyzing, setAnalyzing]    = useState(false);
+  const [scanErr,   setScanErr]      = useState<string | null>(null);
+  const [result,    setResult]       = useState<AnalysisResult | null>(null);
+  const [confirmed, setConfirmed]    = useState<AnalysisResult['data'] | null>(null);
+  const [saved,     setSaved]        = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const plat      = result?.type ?? detectPlatform(url);
+  const platColor = SCAN_PLATFORM_COLORS[plat] ?? '#6366f1';
+  const platLabel = SCAN_PLATFORM_LABELS[plat] ?? 'Perfil';
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setAnalyzing(true);
+    setScanErr(null);
+    try {
+      const b64 = await toBase64Scan(file);
+      const res = await fetch(`/api/people/${personId}/analyze-screenshot`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ image: b64, mimeType: file.type }),
+      });
+      const json = await res.json() as AnalysisResult | { error: string };
+      if ('error' in json) throw new Error(json.error);
+      setResult(json);
+      setConfirmed({ ...json.data });
+    } catch (err) {
+      setScanErr(err instanceof Error ? err.message : 'Error al analizar');
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  function handleConfirm() {
+    if (!result || !confirmed) return;
+    startTransition(async () => {
+      const res = await confirmScreenshotAction(personId, personName, result, confirmed);
+      if (res.error) { setScanErr(res.error); }
+      else { setSaved(true); setTimeout(onSaved, 1400); }
+    });
+  }
+
+  if (saved) {
+    return (
+      <div style={{ marginTop: 6, padding: '7px 12px', background: '#0d2e1a', border: '1px solid #25d36630', borderRadius: 8 }}>
+        <p style={{ margin: 0, fontSize: 12, color: '#34d399' }}>✓ Datos guardados correctamente</p>
+      </div>
+    );
+  }
+
+  // ── Result confirmation modal (overlay) ────────────────────────────────────
+  if (result && confirmed) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div style={{ background: '#13151f', border: '1px solid #2a2d3e', borderRadius: 16, padding: 24, width: '100%', maxWidth: 440, maxHeight: '85vh', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, background: platColor + '22', color: platColor, border: `1px solid ${platColor}44` }}>
+              {platLabel}
+            </span>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>Confirmar datos</h3>
+          </div>
+          {result.data.raw_summary && (
+            <p style={{ margin: '0 0 14px', fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>{result.data.raw_summary}</p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+            {SCAN_EDITABLE_FIELDS.map(([key, label]) => {
+              const raw = confirmed[key];
+              if (Array.isArray(raw) || !raw) return null;
+              const val = String(raw);
+              return (
+                <label key={String(key)} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+                  <input
+                    type="text"
+                    value={val}
+                    onChange={ev => setConfirmed(p => ({ ...p!, [key]: ev.target.value || null }))}
+                    style={{ background: '#1a1d27', border: '1px solid #2a2d3e', borderRadius: 8, padding: '7px 12px', color: '#e2e8f0', fontSize: 13, outline: 'none', width: '100%', colorScheme: 'dark' as const }}
+                  />
+                </label>
+              );
+            })}
+          </div>
+          {scanErr && <p style={{ fontSize: 12, color: '#f87171', margin: '0 0 12px' }}>{scanErr}</p>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#1a1d27', color: '#64748b', border: '1px solid #2a2d3e' }}>
+              Cancelar
+            </button>
+            <button onClick={handleConfirm} disabled={isPending} style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: isPending ? 'wait' : 'pointer', background: '#6366f1', color: '#fff', border: 'none' }}>
+              {isPending ? 'Guardando…' : 'Guardar datos'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Instructions panel (inline) ────────────────────────────────────────────
+  return (
+    <div style={{ marginTop: 6, background: '#0f1520', border: '1px solid #2a2d3e', borderRadius: 8, padding: '10px 14px' }}>
+      {analyzing ? (
+        <p style={{ margin: 0, fontSize: 12, color: '#818cf8' }}>🔍 Analizando screenshot…</p>
+      ) : (
+        <>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
+            1. Toma un screenshot del perfil que se abrió<br />
+            2. Súbelo aquí para que SIR extraiga la información
+          </p>
+          <label style={{ display: 'inline-block', padding: '6px 12px', background: '#6366f122', border: '1px solid #6366f144', borderRadius: 6, color: '#818cf8', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            📂 Seleccionar screenshot
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+          </label>
+        </>
+      )}
+      {scanErr && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#f87171' }}>{scanErr}</p>}
+      <button onClick={onClose} style={{ display: 'block', marginTop: 8, background: 'none', border: 'none', color: '#334155', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+        Cerrar ×
+      </button>
+    </div>
+  );
+}
 
 // ─── Field components ─────────────────────────────────────────────────────────
 
@@ -278,8 +475,13 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
     location: person.location ?? '', education: person.education ?? '',
   });
   const [socialEdit, setSocialEdit] = useState({
-    linkedin_url: person.linkedin_url ?? '', instagram_url: person.instagram_url ?? '',
+    linkedin_url:  person.linkedin_url  ?? '',
+    instagram_url: person.instagram_url ?? '',
+    facebook_url:  person.facebook_url  ?? '',
+    twitter_url:   person.twitter_url   ?? '',
+    tiktok_url:    person.tiktok_url    ?? '',
   });
+  const [activeScan, setActiveScan] = useState<string | null>(null);
   const [datesEdit, setDatesEdit] = useState({
     birthday: person.birthday ?? '', anniversary: person.anniversary ?? '',
   });
@@ -306,7 +508,7 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
 
   function startEdit(card: typeof editingCard) {
     if (card === 'professional') setProfEdit({ role: person.role ?? '', organization: person.organization ?? '', location: person.location ?? '', education: person.education ?? '' });
-    if (card === 'social')     setSocialEdit({ linkedin_url: person.linkedin_url ?? '', instagram_url: person.instagram_url ?? '' });
+    if (card === 'social')     setSocialEdit({ linkedin_url: person.linkedin_url ?? '', instagram_url: person.instagram_url ?? '', facebook_url: person.facebook_url ?? '', twitter_url: person.twitter_url ?? '', tiktok_url: person.tiktok_url ?? '' });
     if (card === 'dates')      setDatesEdit({ birthday: person.birthday ?? '', anniversary: person.anniversary ?? '' });
     if (card === 'notes_pro')  setNotesPro(person.notes_professional ?? '');
     if (card === 'notes_soc')  setNotesSoc(person.notes_social       ?? '');
@@ -357,7 +559,7 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
   const workEntries     = person.work_history ?? [];
   const visibleWork     = showAllWork ? workEntries : workEntries.slice(0, 2);
   const hasProfessional = !!(person.role || person.organization || person.location || person.education || workEntries.length);
-  const hasSocial       = !!(person.linkedin_url || person.instagram_url);
+  const hasSocial       = !!(person.linkedin_url || person.instagram_url || person.facebook_url || person.twitter_url || person.tiktok_url);
   const hasDates        = !!(person.birthday || person.anniversary);
   const hasNotesPro     = !!person.notes_professional;
   const hasNotesSoc     = !!person.notes_social;
@@ -372,10 +574,16 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
 
   // Derived display values
   const prof   = editingCard === 'professional' ? profEdit   : { role: person.role ?? '', organization: person.organization ?? '', location: person.location ?? '', education: person.education ?? '' };
-  const social = editingCard === 'social'       ? socialEdit : { linkedin_url: person.linkedin_url ?? '', instagram_url: person.instagram_url ?? '' };
+  const social = editingCard === 'social' ? socialEdit : {
+    linkedin_url:  person.linkedin_url  ?? '',
+    instagram_url: person.instagram_url ?? '',
+    facebook_url:  person.facebook_url  ?? '',
+    twitter_url:   person.twitter_url   ?? '',
+    tiktok_url:    person.tiktok_url    ?? '',
+  };
   const dates  = editingCard === 'dates'        ? datesEdit  : { birthday: person.birthday ?? '', anniversary: person.anniversary ?? '' };
 
-  if (!hasProfessional && !hasSocial && !hasDates && !hasNotesPro && !hasNotesSoc && !hasNotesPers && !isPrivate) return null;
+  if (!hasProfessional && !hasDates && !hasNotesPro && !hasNotesSoc && !hasNotesPers && !isPrivate) return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -663,28 +871,74 @@ export default function PersonProfileCards({ person }: { person: PersonCardData 
         </Card>
       )}
 
-      {/* ── 7° Redes sociales ── */}
-      {hasSocial && (
-        <Card
-          title="Redes sociales"
-          editing={editingCard === 'social'}
-          onEdit={() => startEdit('social')}
-          onSave={() => saveFields(socialEdit)}
-          onCancel={() => setEditingCard(null)}
-          isPending={isPending}
-          editChildren={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <TF label="LinkedIn URL"  value={socialEdit.linkedin_url}  onChange={v => setSocialEdit(p => ({ ...p, linkedin_url: v }))}  type="url" placeholder="https://linkedin.com/in/username" />
-              <TF label="Instagram URL" value={socialEdit.instagram_url} onChange={v => setSocialEdit(p => ({ ...p, instagram_url: v }))} type="url" placeholder="https://instagram.com/handle" />
-            </div>
-          }
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {social.linkedin_url && <DR icon="💼" value={liUser(social.linkedin_url)} href={social.linkedin_url} />}
-            {social.instagram_url && <DR icon="📷" value={igUser(social.instagram_url)} href={social.instagram_url} />}
+      {/* ── 7° Redes sociales (always visible) ── */}
+      <Card
+        title="Redes sociales"
+        editing={editingCard === 'social'}
+        onEdit={() => { startEdit('social'); setActiveScan(null); }}
+        onSave={() => saveFields(socialEdit)}
+        onCancel={() => { setEditingCard(null); }}
+        isPending={isPending}
+        editChildren={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <TF label="LinkedIn URL"  value={socialEdit.linkedin_url}  onChange={v => setSocialEdit(p => ({ ...p, linkedin_url: v }))}  type="url" placeholder="https://linkedin.com/in/username" />
+            <TF label="Instagram URL" value={socialEdit.instagram_url} onChange={v => setSocialEdit(p => ({ ...p, instagram_url: v }))} type="url" placeholder="https://instagram.com/handle" />
+            <TF label="Facebook URL"  value={socialEdit.facebook_url}  onChange={v => setSocialEdit(p => ({ ...p, facebook_url: v }))}  type="url" placeholder="https://facebook.com/username" />
+            <TF label="Twitter/X URL" value={socialEdit.twitter_url}   onChange={v => setSocialEdit(p => ({ ...p, twitter_url: v }))}   type="url" placeholder="https://x.com/handle" />
+            <TF label="TikTok URL"    value={socialEdit.tiktok_url}    onChange={v => setSocialEdit(p => ({ ...p, tiktok_url: v }))}    type="url" placeholder="https://tiktok.com/@handle" />
           </div>
-        </Card>
-      )}
+        }
+      >
+        {hasSocial ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { url: social.linkedin_url,  icon: '💼', label: liUser, plat: 'linkedin'  },
+              { url: social.instagram_url, icon: '📷', label: igUser, plat: 'instagram' },
+              { url: social.facebook_url,  icon: '🌐', label: fbUser, plat: 'facebook'  },
+              { url: social.twitter_url,   icon: '🐦', label: twUser, plat: 'twitter'   },
+            ].filter(x => x.url).map(({ url, icon, label, plat }) => (
+              <div key={plat}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <DR icon={icon} value={label(url!)} href={url!} />
+                  <button
+                    onClick={() => {
+                      if (activeScan === url) { setActiveScan(null); return; }
+                      window.open(url!, '_blank');
+                      setActiveScan(url!);
+                    }}
+                    style={{
+                      marginLeft: 'auto', flexShrink: 0,
+                      padding: '3px 8px', borderRadius: 6,
+                      background: activeScan === url ? '#6366f122' : '#1a1d27',
+                      border: `1px solid ${activeScan === url ? '#6366f144' : '#2a2d3e'}`,
+                      color: activeScan === url ? '#818cf8' : '#475569',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    📸 Escanear
+                  </button>
+                </div>
+                {activeScan === url && (
+                  <ScanProfilePanel
+                    personId={person.id}
+                    personName={person.name}
+                    url={url!}
+                    onClose={() => setActiveScan(null)}
+                    onSaved={() => setActiveScan(null)}
+                  />
+                )}
+              </div>
+            ))}
+            {social.tiktok_url && (
+              <DR icon="🎵" value={ttUser(social.tiktok_url)} href={social.tiktok_url} />
+            )}
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: 13, color: '#475569' }}>
+            Sin redes sociales guardadas. Haz clic en <strong style={{ color: '#818cf8' }}>Editar</strong> para agregar.
+          </p>
+        )}
+      </Card>
     </div>
   );
 }

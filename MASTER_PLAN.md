@@ -662,6 +662,7 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 | Q1 | Probar onboarding con usuario nuevo real | ⬜ Pendiente |
 | Q2 | Verificar briefing usa contexto WhatsApp | ⬜ Pendiente |
 | Q3 | Notas en inglés mezcladas en perfiles | ⬜ Pendiente |
+| Q4 | UX redes sociales: botón "Escanear perfil" + Facebook/Twitter/TikTok | ✅ 2026-05-16 |
 
 ---
 
@@ -674,8 +675,8 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 | Fase 6 (Inteligencia) | 9 | 9 ✅ |
 | Fase 7 (Distribución) | 7 | 1 ✅ · 6 ⬜ |
 | Bugs | 3 | 0 ⬜ |
-| Calidad | 3 | 0 ⬜ |
-| **Total** | **47** | **35 ✅** |
+| Calidad | 4 | 1 ✅ · 3 ⬜ |
+| **Total** | **48** | **36 ✅** |
 
 ---
 

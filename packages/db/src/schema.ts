@@ -106,9 +106,12 @@ export interface DbPerson {
   phone: string | null;
   organization: string | null;
   role: string | null;
-  linkedin_url: string | null;
+  linkedin_url:  string | null;
   instagram_url: string | null;
-  avatar_url: string | null;
+  facebook_url:  string | null;
+  twitter_url:   string | null;
+  tiktok_url:    string | null;
+  avatar_url:    string | null;
   notes: string | null;
   tags: string[];
   language: string | null;
@@ -149,7 +152,8 @@ export interface DbRelationship {
 
 export type InsertPerson = Pick<DbPerson, 'user_id' | 'name'> &
   Partial<Pick<DbPerson, 'email' | 'phone' | 'organization' | 'role' |
-    'linkedin_url' | 'instagram_url' | 'avatar_url' | 'notes' | 'tags' | 'language' |
+    'linkedin_url' | 'instagram_url' | 'facebook_url' | 'twitter_url' | 'tiktok_url' |
+    'avatar_url' | 'notes' | 'tags' | 'language' |
     'relationship_type' | 'birthday' | 'anniversary' | 'location' | 'education' |
     'work_history' | 'cycle_data' | 'sensitive_context' |
     'emotional_state' | 'love_language' | 'relationship_patterns' |

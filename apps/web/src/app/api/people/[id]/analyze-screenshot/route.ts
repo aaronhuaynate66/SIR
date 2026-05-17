@@ -13,7 +13,7 @@ interface AnalyzeBody {
 }
 
 export interface AnalysisResult {
-  type:     'linkedin' | 'instagram' | 'whatsapp' | 'unknown';
+  type:     'linkedin' | 'instagram' | 'whatsapp' | 'facebook' | 'twitter' | 'unknown';
   data: {
     name?:                    string | null;
     role?:                    string | null;
@@ -22,14 +22,18 @@ export interface AnalysisResult {
     phone?:                   string | null;
     linkedin_url?:            string | null;
     instagram_url?:           string | null;
+    facebook_url?:            string | null;
+    twitter_url?:             string | null;
     birthday?:                string | null; // YYYY-MM-DD
     anniversary?:             string | null; // YYYY-MM-DD
     location?:                string | null;
     education?:               string | null;
     connections?:             number | null;
+    followers?:               number | null;
     work_history?:            WorkHistoryEntry[] | null;
     notes?:                   string | null;
     raw_summary?:             string | null;
+    interests?:               string[] | null;
     // WhatsApp-specific
     conversation_tone?:       string | null;
     emotional_state?:         string | null;
@@ -43,11 +47,11 @@ const SYSTEM = `You are a data extraction assistant. ALWAYS respond in Spanish. 
 
 Analyze the screenshot and return ONLY a valid JSON object — no markdown, no extra text.
 
-Detect the platform: "linkedin", "instagram", "whatsapp", or "unknown".
+Detect the platform: "linkedin", "instagram", "whatsapp", "facebook", "twitter", or "unknown".
 
 Required JSON structure:
 {
-  "type": "linkedin" | "instagram" | "whatsapp" | "unknown",
+  "type": "linkedin" | "instagram" | "whatsapp" | "facebook" | "twitter" | "unknown",
   "data": {
     "name": string or null,
     "role": string or null,
@@ -56,11 +60,15 @@ Required JSON structure:
     "phone": string or null,
     "linkedin_url": string or null,
     "instagram_url": string or null,
+    "facebook_url": string or null,
+    "twitter_url": string or null,
     "birthday": "YYYY-MM-DD" or null,
     "anniversary": "YYYY-MM-DD" or null,
     "location": string or null,
     "education": string or null,
     "connections": number or null,
+    "followers": number or null,
+    "interests": ["interest1", "interest2"] or null,
     "work_history": [
       { "role": "...", "company": "...", "period": "..." }
     ] or null,
@@ -82,15 +90,24 @@ If the platform is "whatsapp", also include these additional fields inside "data
   } or null
 }
 
-Rules:
+Platform-specific extraction rules:
+- linkedin: extract role, organization, location, education, connections, work_history, linkedin_url. notes = professional summary or highlights.
+- instagram: extract location, followers, interests (infer from bio/posts), instagram_url. notes = bio description or content themes.
+- facebook: extract name, location, work (as role+organization), city, interests (from about section/groups). notes = observed topics or public info.
+- twitter: extract name, location, followers, interests (from bio and visible tweets). notes = bio text + recurring tweet themes.
+
+General rules:
 - location: city/region/country visible on the profile (e.g. "Área metropolitana de Lima")
 - education: most recent or most prominent institution (e.g. "Universidad Marcelino Champagnat")
-- connections: numeric count if visible (e.g. 55), otherwise null
-- work_history: extract ALL job entries visible, each with role, company, and period (e.g. "oct. 2025 - present")
+- connections: LinkedIn connections count if visible (e.g. 55), otherwise null
+- followers: Instagram/Twitter/Facebook follower count if visible, otherwise null
+- work_history: extract ALL job entries visible, each with role, company, and period (e.g. "oct. 2025 - presente")
 - notes: ONLY qualitative observations not captured by other fields. Never put location/education/work/connections/cycle info in notes.
 - birthday/anniversary: only if explicitly shown. Format YYYY-MM-DD; use 2000 as year if only month/day visible.
 - linkedin_url: build from username if visible (https://linkedin.com/in/username)
 - instagram_url: build from handle if visible (https://instagram.com/handle)
+- facebook_url: build from profile URL or username if visible (https://facebook.com/username)
+- twitter_url: build from handle if visible (https://x.com/handle)
 - cycle_data: set detected=true only if the conversation explicitly mentions menstrual cycle, period, or menstruation. Extract last_period_start date if mentioned. Do NOT infer or assume cycle info.
 - Return ONLY the JSON object.
 - IMPORTANT: Always respond in Spanish. All text fields including notes, summaries, descriptions, role titles, period labels, emotional_state, and topics must be in Spanish.`;

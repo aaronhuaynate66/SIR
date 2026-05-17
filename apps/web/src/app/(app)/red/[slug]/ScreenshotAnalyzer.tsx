@@ -8,12 +8,16 @@ const PLATFORM_LABELS: Record<AnalysisResult['type'], string> = {
   linkedin:  'LinkedIn',
   instagram: 'Instagram',
   whatsapp:  'WhatsApp',
+  facebook:  'Facebook',
+  twitter:   'Twitter/X',
   unknown:   'Desconocido',
 };
 const PLATFORM_COLORS: Record<AnalysisResult['type'], string> = {
   linkedin:  '#0077b5',
   instagram: '#e1306c',
   whatsapp:  '#25d366',
+  facebook:  '#1877f2',
+  twitter:   '#1da1f2',
   unknown:   '#64748b',
 };
 
@@ -26,6 +30,8 @@ const EDITABLE_FIELDS: [keyof AnalysisResult['data'], string, string][] = [
   ['phone',         'Teléfono',      'tel'  ],
   ['linkedin_url',  'LinkedIn URL',  'url'  ],
   ['instagram_url', 'Instagram URL', 'url'  ],
+  ['facebook_url',  'Facebook URL',  'url'  ],
+  ['twitter_url',   'Twitter/X URL', 'url'  ],
   ['birthday',      'Cumpleaños',    'date' ],
   ['anniversary',   'Aniversario',   'date' ],
   ['location',      'Ubicación',     'text' ],
@@ -40,6 +46,9 @@ export interface ExistingPersonValues {
   education:     string | null;
   linkedin_url:  string | null;
   instagram_url: string | null;
+  facebook_url:  string | null;
+  twitter_url:   string | null;
+  tiktok_url:    string | null;
   birthday:      string | null;
   anniversary:   string | null;
   notes:         string | null;
@@ -54,7 +63,8 @@ interface Props {
 // Fields where merge applies (skip name — always editable, not stored directly)
 const MERGE_FIELDS = new Set<keyof AnalysisResult['data']>([
   'role', 'organization', 'location', 'education',
-  'linkedin_url', 'instagram_url', 'birthday', 'anniversary',
+  'linkedin_url', 'instagram_url', 'facebook_url', 'twitter_url',
+  'birthday', 'anniversary',
 ]);
 
 export default function ScreenshotAnalyzer({ personId, personName, existingValues }: Props) {

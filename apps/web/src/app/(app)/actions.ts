@@ -143,6 +143,9 @@ export async function updatePersonExtraFieldsAction(
     anniversary?:           string | null;
     instagram_url?:         string | null;
     linkedin_url?:          string | null;
+    facebook_url?:          string | null;
+    twitter_url?:           string | null;
+    tiktok_url?:            string | null;
     location?:              string | null;
     education?:             string | null;
     notes?:                 string | null;
@@ -188,7 +191,7 @@ export async function confirmScreenshotAction(
     // Fetch existing person to merge — never overwrite already-set fields
     const { data: existing } = await db
       .from('people')
-      .select('role, organization, location, education, linkedin_url, instagram_url, birthday, anniversary, notes, work_history, email, phone, cycle_data, notes_professional, notes_social, notes_personal')
+      .select('role, organization, location, education, linkedin_url, instagram_url, facebook_url, twitter_url, birthday, anniversary, notes, work_history, email, phone, cycle_data, notes_professional, notes_social, notes_personal')
       .eq('id', personId)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -209,6 +212,8 @@ export async function confirmScreenshotAction(
     mergeIfEmpty('education',     confirmedData.education);
     mergeIfEmpty('linkedin_url',  confirmedData.linkedin_url);
     mergeIfEmpty('instagram_url', confirmedData.instagram_url);
+    mergeIfEmpty('facebook_url',  confirmedData.facebook_url);
+    mergeIfEmpty('twitter_url',   confirmedData.twitter_url);
     mergeIfEmpty('birthday',      confirmedData.birthday);
     mergeIfEmpty('anniversary',   confirmedData.anniversary);
     mergeIfEmpty('email',         confirmedData.email);
@@ -219,6 +224,8 @@ export async function confirmScreenshotAction(
       const noteField =
         result.type === 'linkedin'  ? 'notes_professional' :
         result.type === 'instagram' ? 'notes_social' :
+        result.type === 'facebook'  ? 'notes_social' :
+        result.type === 'twitter'   ? 'notes_social' :
         result.type === 'whatsapp'  ? 'notes_personal' :
         'notes';
       update[noteField] = (ep[noteField] as string | null)
