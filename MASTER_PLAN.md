@@ -644,7 +644,7 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 | 40 | WhatsApp Bot (número propio) | ⬜ Pendiente | Alta |
 | 41 | Múltiples cuentas Google | ⬜ Pendiente | Media |
 | 42 | Stripe + pagos | ⬜ Pendiente | Alta |
-| 43 | Extensión de Chrome | ⬜ Pendiente | Media |
+| 43 | Extensión de Chrome | ✅ Completo | Media |
 | 44 | EAS Build App Store/Play Store | ⬜ Pendiente | Baja |
 
 ## Bugs Pendientes
