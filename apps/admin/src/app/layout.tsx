@@ -6,6 +6,8 @@ export const metadata = {
 const NAV_LINKS = [
   { href: '/',            label: 'Dashboard'  },
   { href: '/users',       label: 'Usuarios'   },
+  { href: '/waitlist',    label: 'Waitlist'   },
+  { href: '/beta',        label: 'Beta'       },
   { href: '/memories',    label: 'Memorias'   },
   { href: '/signals',     label: 'Señales'    },
   { href: '/analytics',   label: 'Analytics'  },

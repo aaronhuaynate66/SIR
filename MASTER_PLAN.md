@@ -666,6 +666,64 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 
 ---
 
+---
+
+## FASE 8 — Marketing y Crecimiento
+
+### Estrategia de lanzamiento en 4 etapas
+
+| Etapa | Nombre | Duración | Objetivo |
+|-------|--------|----------|----------|
+| 1 | Validación | Semana 1-2 | 10 beta users con feedback real |
+| 2 | Contenido | Semana 3-4 | 500 visitas orgánicas |
+| 3 | Lanzamiento | Semana 5-6 | Product Hunt + 50 usuarios |
+| 4 | Crecimiento | Mes 2-3 | 200 usuarios + primeros pagos |
+
+---
+
+### Módulos de Marketing
+
+| # | Módulo | Estado | Prioridad | Commit |
+|---|--------|--------|-----------|--------|
+| M01 | Lista de espera en landing | ✅ 2026-05-17 | Alta | `feat/marketing` |
+| M02 | Video demo del producto | ⬜ Pendiente | Alta | — |
+| M03 | Post LinkedIn — caso de uso Diana | ⬜ Pendiente | Alta | — |
+| M04 | Landing page mejorada con social proof | ✅ 2026-05-17 | Alta | `feat/marketing` |
+| M05 | Sistema de referidos | ⬜ Pendiente | Media | — |
+| M06 | Product Hunt launch | ⬜ Pendiente | Media | — |
+| M07 | Twitter/X threads sobre inteligencia relacional | ⬜ Pendiente | Media | — |
+| M08 | Email nurture sequence (onboarding emails) | ⬜ Pendiente | Media | — |
+| M09 | SEO — blog sobre inteligencia relacional | ⬜ Pendiente | Baja | — |
+| M10 | Programa de beta testers con feedback | ✅ 2026-05-17 | Alta | `feat/marketing` |
+
+---
+
+### M01 — Lista de espera (✅ Implementado)
+- `POST /api/waitlist` — guarda email, asigna posición auto, envía confirmación via Resend
+- `GET /api/waitlist` — retorna conteo para el contador en landing
+- WaitlistForm.tsx — componente client con estados: idle, loading, success, already, error
+- Sección waitlist en landing con contador en tiempo real
+- `/admin/waitlist` — tabla con posición, email, fuente, estado invited/pending
+- SQL: `20260517000001_waitlist.sql` — tabla waitlist con trigger auto-position
+
+### M04 — Landing mejorada (✅ Implementado)
+- Hero: "Nunca más olvides lo importante de las personas que importan"
+- Social proof: 471+ contactos procesados
+- 6 features cards expandidas
+- 3 pasos "Cómo funciona" con detalle técnico
+- 3 casos de uso: founders, managers, networkers
+- 3 testimonios de beta testers
+- Sección waitlist con WaitlistForm embebido
+- Pricing actualizado: Lista espera (gratis) + Individual + Executive
+
+### M10 — Programa beta testers (✅ Implementado)
+- `/beta` — página de aplicación con formulario: nombre, email, cargo, empresa, LinkedIn, razón
+- `POST /api/beta` — guarda aplicación en beta_applications
+- `/admin/beta` — lista de aplicaciones con status (pending/approved/rejected)
+- SQL: `20260517000002_beta_applications.sql` — tabla con estados y timestamps
+
+---
+
 ## Resumen de progreso total
 
 | Fase | Módulos | Completados |
@@ -673,10 +731,11 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 | Fase 0-4 (Core) | 17 | 17 ✅ |
 | Fase 5 (Calidad) | 8 | 8 ✅ |
 | Fase 6 (Inteligencia) | 9 | 9 ✅ |
-| Fase 7 (Distribución) | 7 | 1 ✅ · 6 ⬜ |
-| Bugs | 3 | 0 ⬜ |
-| Calidad | 4 | 1 ✅ · 3 ⬜ |
-| **Total** | **48** | **36 ✅** |
+| Fase 7 (Distribución) | 7 | 2 ✅ · 5 ⬜ |
+| Fase 8 (Marketing) | 10 | 3 ✅ · 7 ⬜ |
+| Bugs | 3 | 3 ✅ |
+| Calidad | 4 | 3 ✅ · 1 ⬜ |
+| **Total** | **58** | **45 ✅** |
 
 ---
 
