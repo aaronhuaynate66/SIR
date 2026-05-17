@@ -28,7 +28,9 @@ interface StateRow {
 interface MemoryRow {
   layer:      string;
   content:    string;
+  importance: number;
   created_at: string;
+  metadata:   Record<string, unknown> | null;
 }
 
 interface SignalRow {
@@ -83,6 +85,62 @@ Reglas:
 - Si hay datos insuficientes en alguna sección, sé honesto y breve
 - Idioma: español`;
 
+// Extract communication stats from memory metadata (WhatsApp/Gmail imports)
+function extractCommStats(memories: MemoryRow[]): {
+  totalMessages: number;
+  weeklyRate: string;
+  tone: string;
+  daySpan: number;
+  sources: string[];
+  firstMessageDate: string | null;
+} | null {
+  const commsMemories = memories.filter(m =>
+    m.metadata?.['source'] === 'whatsapp_import' ||
+    m.metadata?.['source'] === 'gmail_sync'
+  );
+  if (commsMemories.length === 0) return null;
+
+  // Aggregate across all comms memories (WhatsApp + Gmail)
+  let totalMessages = 0;
+  let bestRate = '';
+  let dominantTone = '';
+  let maxMessages = 0;
+  let daySpan = 0;
+  const sources: string[] = [];
+
+  for (const m of commsMemories) {
+    const md = m.metadata!;
+    const msgs = typeof md['total_messages'] === 'number' ? md['total_messages'] :
+                 (typeof md['sent'] === 'number' && typeof md['received'] === 'number'
+                   ? (md['sent'] as number) + (md['received'] as number) : 0);
+    totalMessages += msgs;
+    if (msgs > maxMessages) {
+      maxMessages = msgs;
+      bestRate   = typeof md['weekly_rate'] === 'string' ? md['weekly_rate'] : '';
+      dominantTone = typeof md['tone'] === 'string' ? md['tone'] : '';
+    }
+    const src = String(md['source'] ?? '');
+    if (!sources.includes(src)) sources.push(src);
+  }
+
+  // Estimate day span from best memory content (contains "X días")
+  const daysMatch = commsMemories[0]?.content.match(/(\d+)\s+días/);
+  if (daysMatch?.[1]) daySpan = parseInt(daysMatch[1], 10);
+
+  // First message date: created_at of oldest comms memory minus daySpan
+  const oldestMem = commsMemories.sort((a, b) =>
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )[0];
+  let firstMessageDate: string | null = null;
+  if (oldestMem && daySpan > 0) {
+    const d = new Date(oldestMem.created_at);
+    d.setDate(d.getDate() - daySpan);
+    firstMessageDate = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  }
+
+  return { totalMessages, weeklyRate: bestRate, tone: dominantTone, daySpan, sources, firstMessageDate };
+}
+
 function buildPrompt(opts: {
   person:       DbPerson;
   rel:          DbRelationship | null;
@@ -98,9 +156,34 @@ function buildPrompt(opts: {
     active: 'Activa', strategic: 'Estratégica', prospect: 'Prospecto', dormant: 'Dormida',
   };
 
-  const memoriesBlock = memories.length === 0
+  // Extract communication stats from WhatsApp/Gmail memories
+  const commStats = extractCommStats(memories);
+
+  // Use up to 12 memories, excluding comms-metadata ones already shown in commBlock
+  const narrativeMemories = memories
+    .filter(m => m.metadata?.['source'] !== 'whatsapp_import' && m.metadata?.['source'] !== 'gmail_sync')
+    .slice(0, 8);
+  const commMemories = memories
+    .filter(m => m.metadata?.['source'] === 'whatsapp_import' || m.metadata?.['source'] === 'gmail_sync')
+    .slice(0, 4);
+  const allForBlock = [...commMemories, ...narrativeMemories];
+
+  const memoriesBlock = allForBlock.length === 0
     ? '(sin memorias asociadas)'
-    : memories.slice(0, 8).map(m => `[${m.layer.toUpperCase()}] ${m.content}`).join('\n');
+    : allForBlock.map(m => `[${m.layer.toUpperCase()}] ${m.content}`).join('\n');
+
+  // Build communication history block
+  const commBlock = commStats
+    ? `═══ HISTORIAL DE COMUNICACIÓN ═══
+Mensajes totales: ${commStats.totalMessages.toLocaleString('es-ES')}
+Duración: ~${commStats.daySpan} días (~${Math.round(commStats.daySpan / 365 * 10) / 10} años)
+Frecuencia: ~${commStats.weeklyRate} mensajes/semana
+Tono predominante: ${commStats.tone || 'no determinado'}
+${commStats.firstMessageDate ? `Primera comunicación registrada: ${commStats.firstMessageDate}` : ''}
+Fuentes: ${commStats.sources.join(', ')}
+
+IMPORTANTE: Esta relación tiene ${commStats.daySpan > 365 ? `más de ${Math.floor(commStats.daySpan / 365)} año${Math.floor(commStats.daySpan / 365) > 1 ? 's' : ''}` : `${commStats.daySpan} días`} de comunicación continua documentada. NO la describas como "reciente".`
+    : '';
 
   const signalsBlock = signals.length === 0
     ? '(sin señales recientes que mencionen a esta persona)'
@@ -138,6 +221,10 @@ ${humanState.notes ? `Notas: ${humanState.notes}` : ''}`
     developing:   'Enfócate en el potencial de la relación y primeros pasos para profundizar el vínculo.',
   };
 
+  // "Conocido desde": use first comms date if available (more accurate than person.created_at)
+  const knownSince = commStats?.firstMessageDate
+    ?? new Date(person.created_at).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+
   return `Genera un briefing ejecutivo sobre la siguiente persona en mi red relacional.
 
 ═══ PERSONA ═══
@@ -147,7 +234,7 @@ Organización: ${person.organization ?? 'No especificada'}
 Rol: ${person.role ?? 'No especificado'}
 Email: ${person.email ?? 'No registrado'}
 Notas: ${person.notes ?? 'Sin notas'}
-Conocido desde: ${new Date(person.created_at).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+Primera comunicación conocida: ${knownSince}
 
 DIRECTIVA DE TONO: ${relTypeTone[relTypeRaw] ?? 'Equilibrado y profesional.'}
 
@@ -158,10 +245,11 @@ Fuerza: ${rel.strength}/100 | Reciprocidad: ${rel.reciprocity}/100 | Confianza: 
 Último contacto: ${daysSinceLast}
 Frecuencia objetivo: cada ${rel.contact_frequency_days ?? 30} días` : '(sin relación registrada aún)'}
 
+${commBlock}
 ═══ MI ESTADO HOY ═══
 ${stateBlock}
 
-═══ MEMORIAS ASOCIADAS (${memories.length}) ═══
+═══ MEMORIAS ASOCIADAS (${allForBlock.length}) ═══
 ${memoriesBlock}
 
 ═══ SEÑALES RECIENTES ═══
@@ -259,27 +347,40 @@ export async function POST(req: Request): Promise<Response> {
       .filter(s => JSON.stringify(s.payload).toLowerCase().includes(nameLower))
       .slice(0, 5);
 
-    // Semantic memory search with text fallback
-    let memories: MemoryRow[] = [];
-    if (embedding) {
-      const { data } = await db.rpc('search_memories', {
-        p_user_id:   userId,
-        p_query:     embedding,
-        p_limit:     10,
-        p_threshold: 0.35,
-      });
-      memories = (data ?? []) as MemoryRow[];
-    }
+    // Fetch memories by person_id directly — always correct, no name-matching needed
+    const { data: memoriesByPerson } = await db.from('memories')
+      .select('layer, content, importance, created_at, metadata')
+      .eq('user_id', userId)
+      .eq('person_id', personId)
+      .not('layer', 'in', '("sensory","working")')
+      .is('expires_at', null)
+      .order('importance', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(20);
+    let memories: MemoryRow[] = (memoriesByPerson ?? []) as MemoryRow[];
+
+    // Fallback: semantic or name search for older memories without person_id
     if (memories.length === 0) {
-      const { data } = await db.from('memories')
-        .select('layer, content, created_at')
-        .eq('user_id', userId)
-        .ilike('content', `%${person.name}%`)
-        .not('layer', 'in', '("sensory","working")')
-        .is('expires_at', null)
-        .order('importance', { ascending: false })
-        .limit(10);
-      memories = (data ?? []) as MemoryRow[];
+      if (embedding) {
+        const { data } = await db.rpc('search_memories', {
+          p_user_id:   userId,
+          p_query:     embedding,
+          p_limit:     10,
+          p_threshold: 0.35,
+        });
+        memories = (data ?? []) as MemoryRow[];
+      }
+      if (memories.length === 0) {
+        const { data } = await db.from('memories')
+          .select('layer, content, importance, created_at, metadata')
+          .eq('user_id', userId)
+          .ilike('content', `%${person.name}%`)
+          .not('layer', 'in', '("sensory","working")')
+          .is('expires_at', null)
+          .order('importance', { ascending: false })
+          .limit(10);
+        memories = (data ?? []) as MemoryRow[];
+      }
     }
 
     const humanState = stateRes.data as StateRow | null;
