@@ -1,0 +1,179 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 300px;
+  background: #0f0f1a;
+  color: #e5e7eb;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  min-height: 180px;
+}
+
+#app { display: flex; flex-direction: column; }
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #14142a;
+  border-bottom: 1px solid #2a2a40;
+}
+.logo { font-size: 24px; line-height: 1; }
+.header-text { display: flex; flex-direction: column; gap: 1px; }
+.title { font-weight: 700; font-size: 15px; color: #a78bfa; line-height: 1.2; }
+.subtitle { font-size: 11px; color: #4b5563; }
+
+/* ── Sections ── */
+.section { padding: 12px 16px; border-top: 1px solid #1f1f35; }
+.hidden { display: none; }
+.section-header {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+/* ── Auth ── */
+#auth-section { padding: 16px; }
+
+.not-connected { text-align: center; }
+.not-connected p { color: #9ca3af; font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+
+.btn-primary {
+  display: inline-block;
+  background: #6c63ff;
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+  width: 100%;
+  text-align: center;
+}
+.btn-primary:hover { background: #5a52d5; }
+
+.paste-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.paste-input {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 6px;
+  color: #d1d5db;
+  font-size: 12px;
+  padding: 7px 10px;
+  min-width: 0;
+}
+.paste-input:focus { outline: none; border-color: #6c63ff; }
+.btn-paste {
+  background: #6c63ff;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-paste:hover { background: #5a52d5; }
+
+.connected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #14142a;
+  border-radius: 8px;
+  border: 1px solid #1f1f35;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot.green { background: #34d399; }
+.email {
+  flex: 1;
+  font-size: 12px;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-text {
+  background: none;
+  border: none;
+  color: #4b5563;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.btn-text:hover { color: #f87171; }
+
+/* ── Toggle ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-label { flex: 1; color: #d1d5db; font-size: 13px; }
+.toggle-row input[type=checkbox] { display: none; }
+.toggle-switch {
+  width: 36px;
+  height: 20px;
+  background: #374151;
+  border-radius: 10px;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 14px; height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+input:checked + .toggle-switch { background: #6c63ff; }
+input:checked + .toggle-switch::after { transform: translateX(16px); }
+
+/* ── Recent ── */
+#recent-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+
+.recent-item a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #d1d5db;
+  text-decoration: none;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #14142a;
+  transition: background 0.12s;
+}
+.recent-item a:hover { background: #1e1e35; }
+.recent-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.badge.created  { background: #064e3b; color: #34d399; }
+.badge.updated  { background: #1e3a5f; color: #60a5fa; }

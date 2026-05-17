@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIR Extension</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+
+    <header>
+      <span class="logo">🧠</span>
+      <div class="header-text">
+        <span class="title">SIR</span>
+        <span class="subtitle">Relationship Intelligence</span>
+      </div>
+    </header>
+
+    <div id="auth-section">
+      <!-- rendered by popup.js -->
+    </div>
+
+    <div id="toggle-section" class="section hidden">
+      <label class="toggle-row" for="auto-capture">
+        <span class="toggle-label">Captura automática</span>
+        <input type="checkbox" id="auto-capture">
+        <span class="toggle-switch"></span>
+      </label>
+    </div>
+
+    <div id="recent-section" class="section hidden">
+      <div class="section-header">Recientes</div>
+      <ul id="recent-list"></ul>
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

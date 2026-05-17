@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "SIR — Relationship Intelligence",
+  "version": "1.0.0",
+  "description": "Captura automática de perfiles de LinkedIn e Instagram para SIR",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://instagram.com/*",
+    "https://www.instagram.com/*",
+    "https://sir.marlabinc.com/*"
+  ],
+  "externally_connectable": {
+    "matches": ["https://sir.marlabinc.com/*"]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/in/*"],
+      "js": ["content/common.js", "content/linkedin.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://instagram.com/*", "https://www.instagram.com/*"],
+      "js": ["content/common.js", "content/instagram.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://sir.marlabinc.com/*"],
+      "js": ["content/connect_bridge.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
