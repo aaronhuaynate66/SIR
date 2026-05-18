@@ -29,8 +29,7 @@ export default function OnboardingPersonForm() {
     if (result.error) {
       setError(result.error);
     } else if (result.personId) {
-      const params = new URLSearchParams({ personId: result.personId, personName: result.personName ?? '' });
-      router.push(`/onboarding/screenshot?${params.toString()}`);
+      router.push('/onboarding/extension?added=1');
     }
   }
 

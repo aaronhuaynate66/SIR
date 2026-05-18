@@ -4,8 +4,9 @@ import { usePathname } from 'next/navigation';
 
 const STEPS = [
   '/onboarding/bienvenida',
+  '/onboarding/importar-red',
   '/onboarding/primera-persona',
-  '/onboarding/screenshot',
+  '/onboarding/extension',
   '/onboarding/listo',
 ];
 

@@ -29,7 +29,7 @@ export default function BienvenidaPage() {
         ))}
       </div>
 
-      <Link href="/onboarding/primera-persona" style={{
+      <Link href="/onboarding/importar-red" style={{
         display: 'inline-block',
         padding: '12px 32px',
         background: '#6366f1',

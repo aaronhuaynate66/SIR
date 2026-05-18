@@ -21,9 +21,11 @@ export async function GET(req: NextRequest): Promise<Response> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(base('/login'));
 
-  // Verify state
-  const expectedState = Buffer.from(user.id).toString('base64url');
-  if (state !== expectedState) {
+  // Verify state — supports plain userId and userId:onboarding
+  const decoded       = Buffer.from(state ?? '', 'base64url').toString();
+  const [decodedUid, flag] = decoded.split(':');
+  const isOnboarding  = flag === 'onboarding';
+  if (decodedUid !== user.id) {
     return NextResponse.redirect(base('/config/integraciones?error=invalid_state'));
   }
 
@@ -114,6 +116,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     await db.from('google_integrations').insert({ ...payload, is_primary: isPrimary });
   }
 
-  const finalUrl = `${getAppUrl()}/config/integraciones?connected=google`;
+  const finalUrl = isOnboarding
+    ? `${getAppUrl()}/onboarding/primera-persona?source=google`
+    : `${getAppUrl()}/config/integraciones?connected=google`;
   return NextResponse.redirect(finalUrl);
 }
