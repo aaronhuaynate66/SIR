@@ -1,10 +1,32 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { getAuthUser } from '@/lib/supabase-server';
 import { getServiceClient } from '@/lib/supabase-server';
 import WaitlistForm from './_components/WaitlistForm';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'SIR — Sistema de Inteligencia Relacional',
+  description: 'Nunca más olvides lo importante de las personas que importan. Briefings con IA, memoria profunda y detección de señales para tu red profesional y personal.',
+  openGraph: {
+    title: 'SIR — Sistema de Inteligencia Relacional',
+    description: 'Tu sistema de inteligencia relacional personal. Briefings con IA, memoria y detección de oportunidades.',
+    url: 'https://sir.marlabinc.com',
+    siteName: 'SIR',
+    type: 'website',
+    locale: 'es_ES',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SIR — Sistema de Inteligencia Relacional',
+    description: 'Nunca más olvides lo importante de las personas que importan.',
+  },
+  alternates: {
+    canonical: 'https://sir.marlabinc.com',
+  },
+};
 
 async function getWaitlistCount(): Promise<number> {
   try {

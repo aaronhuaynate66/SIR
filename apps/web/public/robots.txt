@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /privacidad
+Allow: /terminos
+Allow: /beta
+Disallow: /inicio
+Disallow: /red
+Disallow: /grafo
+Disallow: /senales
+Disallow: /memorias
+Disallow: /estado
+Disallow: /executive
+Disallow: /config
+Disallow: /admin
+Disallow: /api/
+Disallow: /onboarding/
+Disallow: /login
+Disallow: /signup
+
+Sitemap: https://sir.marlabinc.com/sitemap.xml

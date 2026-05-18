@@ -1,6 +1,11 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/supabase-server';
 import ProgressBar from './ProgressBar';
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const user = await getAuthUser();
