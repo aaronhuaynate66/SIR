@@ -13,6 +13,18 @@ const nextConfig = {
       { source: '/state',      destination: '/estado',   permanent: true },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: '/(inicio|red|grafo|senales|memorias|estado|executive|config|onboarding|login|signup)(.*)',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/api/(.*)',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {
