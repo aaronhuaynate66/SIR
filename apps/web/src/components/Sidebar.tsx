@@ -82,6 +82,7 @@ export default function Sidebar({
 
           {/* Search trigger */}
           <button
+            type="button"
             onClick={openSearch}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,

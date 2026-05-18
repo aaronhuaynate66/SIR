@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import type { GlobalSearchResult } from '@/app/api/search/route';
 
@@ -73,7 +74,7 @@ export default function SearchModal({ open, onClose }: Props) {
 
   const hasResults = results && (results.people.length + results.memories.length + results.signals.length) > 0;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
@@ -165,7 +166,8 @@ export default function SearchModal({ open, onClose }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
