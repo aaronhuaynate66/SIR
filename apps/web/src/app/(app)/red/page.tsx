@@ -3,19 +3,10 @@ import Link from 'next/link';
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 import type { DbPerson, PersonRelationshipType } from '@sir/db';
 import NewPersonButton from './NewPersonButton';
+import PeopleGridClient, { type PersonRow } from './PeopleGridClient';
+import RecentActivityRow, { type RecentPerson } from './RecentActivityRow';
 
 export const dynamic = 'force-dynamic';
-
-const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
-function avatarColor(name: string) { return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length] ?? '#6366f1'; }
-function initials(name: string) { return name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase(); }
-
-const STAGE_LABEL: Record<string, string> = {
-  active: 'Activa', strategic: 'Estratégica', prospect: 'Prospecto', dormant: 'Dormida',
-};
-const STAGE_COLOR: Record<string, string> = {
-  active: '#86efac', strategic: '#fcd34d', prospect: '#93c5fd', dormant: '#d1d5db',
-};
 
 const REL_TYPE_COLORS: Record<PersonRelationshipType, string> = {
   strategic:    '#a855f7',
@@ -45,6 +36,13 @@ const FILTER_CHIPS: Array<{ value: PersonRelationshipType | 'all'; label: string
   { value: 'developing',   label: '🌱 Por desarrollar' },
 ];
 
+const SIGNAL_TYPE_LABELS: Record<string, string> = {
+  relationship: 'Nueva relación', job_change: 'Cambio de trabajo',
+  promotion: 'Promoción', birthday: 'Cumpleaños', achievement: 'Logro',
+  life_event: 'Evento de vida', travel: 'Viaje', publication: 'Publicación',
+  health_event: 'Evento de salud', loss: 'Pérdida', interaction: 'Interacción',
+};
+
 export default async function PeoplePage({
   searchParams,
 }: {
@@ -55,7 +53,9 @@ export default async function PeoplePage({
 
   const db = getServiceClient();
   const typeFilter = (searchParams?.type ?? '') as PersonRelationshipType | '';
+  const activeFilter = typeFilter || 'all';
 
+  // Build people query (with optional type filter)
   let peopleQuery = db
     .from('people')
     .select('id, name, organization, role, email, notes, relationship_type, slug, created_at')
@@ -66,9 +66,22 @@ export default async function PeoplePage({
     peopleQuery = peopleQuery.eq('relationship_type', typeFilter) as typeof peopleQuery;
   }
 
-  const [{ data: peopleData }, { data: relsData }] = await Promise.all([
+  const [
+    { data: peopleData },
+    { data: relsData },
+    { data: signalsData },
+  ] = await Promise.all([
     peopleQuery,
-    db.from('relationships').select('person_id, strength, stage, last_contact_at, contact_frequency_days').eq('user_id', user.id),
+    db.from('relationships')
+      .select('person_id, strength, stage, last_contact_at, contact_frequency_days')
+      .eq('user_id', user.id),
+    // Most recent social signals per person (person_id set by social intelligence pipeline)
+    db.from('signals')
+      .select('person_id, signal_type, created_at')
+      .eq('user_id', user.id)
+      .not('person_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100),
   ]);
 
   const people = (peopleData ?? []) as (DbPerson & { relationship_type: PersonRelationshipType })[];
@@ -77,23 +90,85 @@ export default async function PeoplePage({
       .map(r => [r.person_id, r])
   );
 
-  function healthDotColor(personId: string): string {
+  // Compute health score
+  function healthScore(personId: string): number {
     const rel = relMap.get(personId);
-    if (!rel) return '#334155'; // no data
+    if (!rel) return 0;
     let freqScore = 50;
     if (rel.last_contact_at) {
       const days = (Date.now() - new Date(rel.last_contact_at).getTime()) / 86_400_000;
       const expected = rel.contact_frequency_days ?? 30;
       freqScore = Math.max(0, Math.min(100, 100 - (days / expected) * 50));
     }
-    const score = Math.round(freqScore * 0.4 + (rel.strength ?? 50) * 0.6);
-    return score >= 70 ? '#34d399' : score >= 40 ? '#fbbf24' : '#f87171';
+    return Math.round(freqScore * 0.4 + (rel.strength ?? 50) * 0.6);
   }
 
-  const activeFilter = typeFilter || 'all';
+  // Build PersonRow list for client grid
+  const personRows: PersonRow[] = people.map(p => {
+    const rel = relMap.get(p.id);
+    return {
+      id:               p.id,
+      name:             p.name,
+      organization:     p.organization ?? null,
+      role:             p.role ?? null,
+      notes:            p.notes ?? null,
+      relationship_type: p.relationship_type ?? 'networking',
+      slug:             (p as DbPerson & { slug?: string | null }).slug ?? null,
+      health:           healthScore(p.id),
+      strength:         rel?.strength ?? null,
+      stage:            rel?.stage ?? null,
+      lastContact:      rel?.last_contact_at ?? null,
+    };
+  });
+
+  // Build "Actividad reciente": top 10 people by most recent signal
+  const peopleById = new Map(people.map(p => [p.id, p]));
+  const activityMap = new Map<string, { label: string; at: string }>();
+
+  type SignalRow = { person_id: string | null; signal_type: string | null; created_at: string };
+  for (const s of (signalsData ?? []) as SignalRow[]) {
+    if (!s.person_id) continue;
+    if (!activityMap.has(s.person_id)) {
+      activityMap.set(s.person_id, {
+        label: SIGNAL_TYPE_LABELS[s.signal_type ?? ''] ?? 'Nueva señal',
+        at:    s.created_at,
+      });
+    }
+  }
+
+  // Fallback: people with recent last_contact
+  if (activityMap.size < 8) {
+    const sorted = [...relMap.entries()]
+      .filter(([, r]) => r.last_contact_at)
+      .sort((a, b) => new Date(b[1].last_contact_at!).getTime() - new Date(a[1].last_contact_at!).getTime());
+    for (const [pid, r] of sorted) {
+      if (activityMap.size >= 10) break;
+      if (!activityMap.has(pid) && peopleById.has(pid)) {
+        activityMap.set(pid, { label: 'Último contacto', at: r.last_contact_at! });
+      }
+    }
+  }
+
+  const recentPeople: RecentPerson[] = [...activityMap.entries()]
+    .sort((a, b) => new Date(b[1].at).getTime() - new Date(a[1].at).getTime())
+    .slice(0, 10)
+    .flatMap(([pid, act]) => {
+      const p = peopleById.get(pid);
+      if (!p) return [];
+      return [{
+        id:            p.id,
+        name:          p.name,
+        organization:  p.organization ?? null,
+        role:          p.role ?? null,
+        slug:          (p as DbPerson & { slug?: string | null }).slug ?? null,
+        activityLabel: act.label,
+        activityAt:    act.at,
+      }];
+    });
 
   return (
     <div>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: '#e2e8f0', margin: '0 0 4px' }}>Personas</h1>
@@ -109,8 +184,11 @@ export default async function PeoplePage({
         </div>
       </div>
 
+      {/* Actividad reciente */}
+      <RecentActivityRow people={recentPeople} />
+
       {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         {FILTER_CHIPS.map(chip => {
           const isActive = activeFilter === chip.value;
           const color = chip.value !== 'all' ? REL_TYPE_COLORS[chip.value as PersonRelationshipType] : '#818cf8';
@@ -136,6 +214,7 @@ export default async function PeoplePage({
         })}
       </div>
 
+      {/* Grid */}
       {people.length === 0 ? (
         <div>
           {activeFilter === 'all' && (
@@ -178,91 +257,8 @@ export default async function PeoplePage({
           </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-          {people.map(person => {
-            const rel     = relMap.get(person.id);
-            const strength = rel?.strength ?? null;
-            const stage    = rel?.stage ?? null;
-            const relType  = (person.relationship_type ?? 'networking') as PersonRelationshipType;
-            const typeColor = REL_TYPE_COLORS[relType];
-
-            return (
-              <Link key={person.id} href={`/red/${(person as DbPerson & { slug?: string | null }).slug ?? person.id}`} style={card}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                    background: avatarColor(person.name),
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 16, fontWeight: 700,
-                  }}>
-                    {initials(person.name)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
-                      <div title="Salud relacional" style={{
-                        width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                        background: healthDotColor(person.id),
-                      }} />
-                      <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {person.name}
-                      </p>
-                    </div>
-                    {person.organization || person.role ? (
-                      <p style={{ margin: 0, fontSize: 12, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {[person.role, person.organization].filter(Boolean).join(' · ')}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  {/* Relationship type badge */}
-                  <span style={{
-                    fontSize: 11, fontWeight: 600,
-                    background: typeColor + '22',
-                    border: `1px solid ${typeColor}44`,
-                    color: typeColor,
-                    borderRadius: 10, padding: '2px 8px',
-                  }}>
-                    {REL_TYPE_LABELS[relType]}
-                  </span>
-
-                  {stage && (
-                    <span style={{
-                      fontSize: 11, fontWeight: 600,
-                      background: STAGE_COLOR[stage] ?? '#d1d5db',
-                      color: '#111', borderRadius: 10, padding: '2px 8px',
-                    }}>
-                      {STAGE_LABEL[stage] ?? stage}
-                    </span>
-                  )}
-                  {strength !== null && (
-                    <span style={{ fontSize: 12, color: strength >= 70 ? '#34d399' : strength >= 40 ? '#fbbf24' : '#f87171', fontWeight: 600, marginLeft: 'auto' }}>
-                      {strength} fuerza
-                    </span>
-                  )}
-                </div>
-
-                {person.notes && (
-                  <p style={{ margin: '10px 0 0', fontSize: 12, color: '#475569', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {person.notes}
-                  </p>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <PeopleGridClient people={personRows} />
       )}
     </div>
   );
 }
-
-const card: React.CSSProperties = {
-  display: 'block',
-  background: '#1a1d27',
-  border: '1px solid #2a2d3e',
-  borderRadius: 14,
-  padding: 18,
-  textDecoration: 'none',
-  transition: 'border-color 0.15s',
-};
