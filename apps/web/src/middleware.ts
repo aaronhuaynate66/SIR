@@ -28,8 +28,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthRoute   = pathname.startsWith('/login') || pathname.startsWith('/signup');
   const isApiRoute    = pathname.startsWith('/api');
-  const isStaticFile  = pathname.startsWith('/icons/') || pathname === '/manifest.json' || pathname === '/sw.js';
-  const isPublicPage  = pathname === '/' || pathname.startsWith('/privacidad') || pathname.startsWith('/terminos');
+  const isStaticFile  = pathname.startsWith('/icons/') || pathname === '/manifest.json' || pathname === '/sw.js'
+                     || pathname === '/robots.txt' || pathname === '/sitemap.xml' || pathname.startsWith('/sitemap/');
+  const isPublicPage  = pathname === '/' || pathname.startsWith('/privacidad') || pathname.startsWith('/terminos')
+                     || pathname.startsWith('/beta');
   const isProtected   = !isAuthRoute && !isApiRoute && !isStaticFile && !isPublicPage;
 
   if (isProtected && !user) {
