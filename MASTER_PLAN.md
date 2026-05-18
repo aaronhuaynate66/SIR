@@ -1,8 +1,10 @@
 # SIR — Master Plan
 
 ## Estado general
-Última actualización: 2026-05-16
-Versión en producción: `master` — Phase 6 completa + Fase 7 iniciada (38/44 módulos)
+Última actualización: 2026-05-18
+Versión en producción: `master` — Phase 6 completa + Fase 7 iniciada + Fase 8 Marketing (46/58 módulos)
+
+**Nota 2026-05-18:** Módulo 43b — Mis Redes Sociales en /config. Sección nueva en la página de configuración con 4 tarjetas (LinkedIn, Instagram, Twitter/X, TikTok). Cada una tiene campo individual, botón "Guardar", badge "CONECTADO" y contador de contactos cruzados. Migración `20260517000003_users_social_profiles.sql` (4 columnas en users). API `GET/PATCH /api/user/social`. Server action `updateSocialProfileAction`. Chrome Extension: `content/linkedin.js` detecta automáticamente cuando el usuario está en su propio perfil LinkedIn y guarda `linkedin_url` sin mostrar banner (toast silencioso). ZIP reconstruido.
 
 **Nota 2026-05-16 (sesión actual):** Módulos 36-38 completados. Sentry + Vercel Analytics (36), Microsoft/Outlook OAuth + Graph API (37), WhatsApp upload por perfil de persona vía Supabase Storage (38). Fixes: React hydration #425/#418/#423, Google OAuth redirect mismatch, WhatsApp parser multi-format (español/inglés), memorias query por person_id.
 
@@ -645,6 +647,7 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 | 41 | Múltiples cuentas Google | ⬜ Pendiente | Media |
 | 42 | Stripe + pagos | ⬜ Pendiente | Alta |
 | 43 | Extensión de Chrome | ✅ Completo | Media |
+| 43b | Mis Redes Sociales en /config | ✅ 2026-05-18 | Media |
 | 44 | EAS Build App Store/Play Store | ⬜ Pendiente | Baja |
 
 ## Bugs Pendientes
@@ -731,11 +734,11 @@ Construye el Executive Mode — vista de alto nivel para usuarios premium.
 | Fase 0-4 (Core) | 17 | 17 ✅ |
 | Fase 5 (Calidad) | 8 | 8 ✅ |
 | Fase 6 (Inteligencia) | 9 | 9 ✅ |
-| Fase 7 (Distribución) | 7 | 2 ✅ · 5 ⬜ |
+| Fase 7 (Distribución) | 8 | 3 ✅ · 5 ⬜ |
 | Fase 8 (Marketing) | 10 | 3 ✅ · 7 ⬜ |
 | Bugs | 3 | 3 ✅ |
 | Calidad | 4 | 3 ✅ · 1 ⬜ |
-| **Total** | **58** | **45 ✅** |
+| **Total** | **59** | **46 ✅** |
 
 ---
 

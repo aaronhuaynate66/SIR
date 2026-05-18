@@ -3,6 +3,44 @@
 import { revalidatePath } from 'next/cache';
 import { getAuthUser, getServiceClient } from '@/lib/supabase-server';
 
+type SocialKey = 'linkedin_url' | 'instagram_username' | 'twitter_username' | 'tiktok_username';
+
+export async function updateSocialProfileAction(
+  key: SocialKey,
+  value: string | null,
+): Promise<{ matches: Record<string, number> }> {
+  const user = await getAuthUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const db = getServiceClient();
+  const { error } = await db.from('users').update({ [key]: value || null }).eq('id', user.id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/config');
+
+  const matches: Record<string, number> = {};
+
+  if (key === 'linkedin_url' && value) {
+    const { count } = await db.from('people')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .not('linkedin_url', 'is', null);
+    matches['linkedin'] = count ?? 0;
+  }
+
+  if (key === 'instagram_username' && value) {
+    const uname = value.replace(/^@/, '');
+    const { count } = await db.from('people')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .not('instagram_url', 'is', null)
+      .ilike('instagram_url', `%${uname}%`);
+    matches['instagram'] = count ?? 0;
+  }
+
+  return { matches };
+}
+
 export interface ProfilePrefs {
   name:       string;
   language:   string;

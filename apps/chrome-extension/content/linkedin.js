@@ -7,6 +7,19 @@
   let attempts = 0;
   const MAX    = 12;
 
+  const currentProfileUrl = 'https://www.linkedin.com' +
+    location.pathname.split('?')[0].replace(/\/$/, '');
+
+  function isOwnProfile() {
+    // Elements that only appear when viewing your own LinkedIn profile
+    return !!(
+      document.querySelector('button[aria-label="Edit intro"]') ||
+      document.querySelector('button[data-control-name="edit_intro"]') ||
+      document.querySelector('a[href*="/in/edit"]') ||
+      document.querySelector('[data-view-name="profile-card-edit-button"]')
+    );
+  }
+
   function tryExtract() {
     attempts++;
     if (attempts > MAX) return;
@@ -17,8 +30,33 @@
       return;
     }
 
-    const cacheKey = data.linkedin_url;
+    if (isOwnProfile()) {
+      // Auto-save own profile URL to users.linkedin_url
+      getSIRToken(token => {
+        if (!token) return;
+        fetch('https://sir.marlabinc.com/api/user/social', {
+          method: 'GET',
+          headers: { Authorization: 'Bearer ' + token },
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(stored => {
+            if (stored?.linkedin_url === currentProfileUrl) return; // already saved
+            return fetch('https://sir.marlabinc.com/api/user/social', {
+              method: 'PATCH',
+              headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ linkedin_url: currentProfileUrl }),
+            });
+          })
+          .then(r => {
+            if (r && r.ok) showOwnProfileToast();
+          })
+          .catch(() => {/* silent */});
+      });
+      return;
+    }
 
+    // Contact profile — existing capture flow
+    const cacheKey = data.linkedin_url;
     checkCache(cacheKey, cached => {
       if (cached) return;
       getSIRToken(token => {
@@ -28,6 +66,25 @@
         });
       });
     });
+  }
+
+  function showOwnProfileToast() {
+    if (document.getElementById('sir-own-toast')) return;
+    const toast = document.createElement('div');
+    toast.id = 'sir-own-toast';
+    toast.textContent = '✓ SIR — Tu perfil LinkedIn guardado';
+    Object.assign(toast.style, {
+      position: 'fixed', bottom: '20px', left: '50%',
+      transform: 'translateX(-50%)',
+      background: '#1e1b4b', color: '#a5b4fc',
+      padding: '10px 18px', borderRadius: '8px',
+      fontSize: '13px', fontWeight: '600',
+      zIndex: '99999', border: '1px solid #6366f1',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+      transition: 'opacity 0.4s',
+    });
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3000);
   }
 
   // Wait for DOM after React hydration
@@ -53,7 +110,7 @@
 
   function extractLinkedIn() {
     const data = {
-      linkedin_url: 'https://www.linkedin.com' + location.pathname.split('?')[0].replace(/\/$/, ''),
+      linkedin_url: currentProfileUrl,
     };
 
     // Name
