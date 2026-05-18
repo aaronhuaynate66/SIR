@@ -136,7 +136,7 @@ export default async function PeoplePage({
     }
   }
 
-  // Fallback: people with recent last_contact
+  // Fallback 1: people with recent last_contact_at
   if (activityMap.size < 8) {
     const sorted = [...relMap.entries()]
       .filter(([, r]) => r.last_contact_at)
@@ -149,7 +149,11 @@ export default async function PeoplePage({
     }
   }
 
-  const recentPeople: RecentPerson[] = [...activityMap.entries()]
+  // Determine title and whether we're in activity vs recency mode
+  const hasSignalActivity = activityMap.size > 0;
+
+  // Fallback 2: most recently added people (created_at DESC) — always fills the row
+  let recentPeople: RecentPerson[] = [...activityMap.entries()]
     .sort((a, b) => new Date(b[1].at).getTime() - new Date(a[1].at).getTime())
     .slice(0, 10)
     .flatMap(([pid, act]) => {
@@ -165,6 +169,25 @@ export default async function PeoplePage({
         activityAt:    act.at,
       }];
     });
+
+  // If still empty, use newest people from the people array
+  if (recentPeople.length === 0 && people.length > 0) {
+    const byCreated = [...people]
+      .sort((a, b) => new Date((b as DbPerson & { created_at?: string }).created_at ?? 0).getTime()
+                    - new Date((a as DbPerson & { created_at?: string }).created_at ?? 0).getTime())
+      .slice(0, 8);
+    recentPeople = byCreated.map(p => ({
+      id:            p.id,
+      name:          p.name,
+      organization:  p.organization ?? null,
+      role:          p.role ?? null,
+      slug:          (p as DbPerson & { slug?: string | null }).slug ?? null,
+      activityLabel: 'Nuevo contacto',
+      activityAt:    (p as DbPerson & { created_at?: string }).created_at ?? new Date().toISOString(),
+    }));
+  }
+
+  const activityRowTitle = hasSignalActivity ? 'Actividad reciente' : 'Agregados recientemente';
 
   return (
     <div>
@@ -184,8 +207,8 @@ export default async function PeoplePage({
         </div>
       </div>
 
-      {/* Actividad reciente */}
-      <RecentActivityRow people={recentPeople} />
+      {/* Actividad reciente / Agregados recientemente */}
+      <RecentActivityRow people={recentPeople} title={activityRowTitle} />
 
       {/* Filter chips */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>

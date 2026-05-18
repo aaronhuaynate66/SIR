@@ -26,18 +26,25 @@ function timeAgo(iso: string): string {
   return `hace ${Math.floor(days / 30)}mes`;
 }
 
-export default function RecentActivityRow({ people }: { people: RecentPerson[] }) {
+export default function RecentActivityRow({
+  people,
+  title,
+}: {
+  people: RecentPerson[];
+  title: string;
+}) {
   if (people.length === 0) return null;
 
   return (
     <div style={{ marginBottom: 32 }}>
       <h2 style={{ fontSize: 14, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 12px' }}>
-        Actividad reciente
+        {title}
       </h2>
       <div style={{
         display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8,
         scrollbarWidth: 'none',
-      }}>
+        msOverflowStyle: 'none',
+      } as React.CSSProperties}>
         {people.map(p => (
           <Link
             key={p.id}
@@ -51,7 +58,6 @@ export default function RecentActivityRow({ people }: { people: RecentPerson[] }
               gap: 8,
             }}
           >
-            {/* Avatar */}
             <div style={{
               width: 40, height: 40, borderRadius: '50%',
               background: avatarColor(p.name),
@@ -61,7 +67,6 @@ export default function RecentActivityRow({ people }: { people: RecentPerson[] }
               {initials(p.name)}
             </div>
 
-            {/* Name + org */}
             <div style={{ minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {p.name}
@@ -73,7 +78,6 @@ export default function RecentActivityRow({ people }: { people: RecentPerson[] }
               )}
             </div>
 
-            {/* Activity */}
             <div style={{ borderTop: '1px solid #2a2d3e', paddingTop: 8 }}>
               <p style={{ margin: 0, fontSize: 10, color: '#6366f1', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {p.activityLabel}
