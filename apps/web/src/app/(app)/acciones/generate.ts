@@ -102,6 +102,7 @@ function buildFallback(candidate: {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function generateDailyActions(userId: string): Promise<ActionWithPerson[]> {
+  console.log('[ACTIONS] Starting for user:', userId);
   const db     = getServiceClient();
   const today  = todayBucket();
 
@@ -123,6 +124,7 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
     .neq('status', 'dismissed')
     .order('created_at', { ascending: true });
 
+  console.log('[ACTIONS] Cached today:', existing?.length ?? 0);
   if (existing && existing.length > 0) {
     return (existing as RawRow[]).map(r => ({
       ...r,
@@ -166,6 +168,14 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
   const dates   = (datesRes.data  ?? []) as DateRow[];
   const people  = (peopleRes.data ?? []) as PersonRow[];
 
+  console.log('[ACTIONS] Relationships:', rels.length);
+  console.log('[ACTIONS] Signals with person_id:', signals.filter(s => s.person_id).length);
+  console.log('[ACTIONS] Upcoming dates rows:', dates.length);
+  console.log('[ACTIONS] People:', people.length);
+  if (relsRes.error)    console.error('[ACTIONS] relsRes error:', relsRes.error.message);
+  if (signalsRes.error) console.error('[ACTIONS] signalsRes error:', signalsRes.error.message);
+  if (peopleRes.error)  console.error('[ACTIONS] peopleRes error:', peopleRes.error.message);
+
   const personMap   = new Map(people.map(p => [p.id, p]));
 
   // signals per person (last 30d)
@@ -186,7 +196,14 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
   }
 
   // ── 3. Score each relationship ────────────────────────────────────────────
-  const scored = rels
+  type Candidate = {
+    person: PersonRow; rel: RelRow; score: number;
+    urgency: 'high' | 'medium' | 'low'; reason: string;
+    daysSince: number | null; sigCount: number;
+    upcoming: { label: string; daysUntilDate: number }[];
+  };
+
+  const allScored = rels
     .map(rel => {
       const person = personMap.get(rel.person_id);
       if (!person) return null;
@@ -204,11 +221,9 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
 
       let score = Math.round(overdueScore * 0.4 + healthNeed * 0.3 + stageUrgency * 0.3);
 
-      // Bonus: upcoming dates
       const upcoming = upcomingDates.get(rel.person_id);
       if (upcoming && upcoming.length > 0) score += 30;
 
-      // Bonus: recent signals (person is "hot")
       const sigCount = signalMap.get(rel.person_id) ?? 0;
       if (sigCount > 0) score += 10;
 
@@ -230,18 +245,44 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
         reason = 'Buen momento para reforzar el vínculo';
       }
 
-      return { person, rel, score, urgency, reason, daysSince, sigCount, upcoming: upcoming ?? [] };
+      return { person, rel, score, urgency, reason, daysSince, sigCount, upcoming: upcoming ?? [] } as Candidate;
     })
-    .filter((c): c is NonNullable<typeof c> => c !== null && c.score > 10)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    .filter((c): c is Candidate => c !== null && c.score > 10)
+    .sort((a, b) => b.score - a.score);
 
-  console.log('[generate] scored candidates:', scored.length, scored.map(c => c.person.name));
+  console.log('[ACTIONS] Total candidates after scoring (score>10):', allScored.length,
+    allScored.slice(0, 5).map(c => `${c.person.name}(${c.score})`));
+
+  let scored = allScored.slice(0, 3);
+
+  // Fallback: if scoring yielded nothing (e.g. relationships table empty),
+  // pick top 3 people by signal count so we always show something.
+  if (scored.length === 0 && people.length > 0) {
+    console.log('[ACTIONS] Scoring empty → using signal-count fallback');
+    const top3 = [...people]
+      .sort((a, b) => (signalMap.get(b.id) ?? 0) - (signalMap.get(a.id) ?? 0))
+      .slice(0, 3);
+    scored = top3.map(person => ({
+      person,
+      rel: { person_id: person.id, strength: 50, reciprocity: 50, trust_score: 0.5,
+             stage: 'active', last_contact_at: null, contact_frequency_days: 30 } as RelRow,
+      score: 50,
+      urgency: 'medium' as const,
+      reason:  'Mantener el contacto regular',
+      daysSince: null,
+      sigCount:  signalMap.get(person.id) ?? 0,
+      upcoming:  upcomingDates.get(person.id) ?? [],
+    }));
+    console.log('[ACTIONS] Fallback candidates:', scored.map(c => c.person.name));
+  }
+
+  console.log('[ACTIONS] Final scored:', scored.length, scored.map(c => c.person.name));
   if (scored.length === 0) return [];
 
   // ── 4. Build context + call Claude for each candidate ────────────────────
   const apiKey = process.env['ANTHROPIC_API_KEY'];
-  console.log('[generate] apiKey present:', !!apiKey);
+  console.log('[ACTIONS] ANTHROPIC_API_KEY present:', !!apiKey);
+  console.log('[ACTIONS] Key prefix:', apiKey?.substring(0, 10));
 
   const SYSTEM = `Eres un asesor de relaciones profesionales. Analiza el contexto de esta persona y genera exactamente 5 campos JSON.
 Responde ÚNICAMENTE con JSON válido, sin markdown, sin explicaciones adicionales.
@@ -261,11 +302,11 @@ Reglas estrictas:
 - message_suggestion debe ser copiable y enviable sin edición
 - Idioma: español`;
 
-  console.log('[generate] starting', scored.length, 'Claude calls in parallel');
+  console.log('[ACTIONS] Starting', scored.length, 'Claude calls in parallel');
   const results = await Promise.allSettled(
     scored.map(async candidate => {
       const { person, rel, reason, daysSince, sigCount, upcoming } = candidate;
-      console.log('[generate] calling Claude for:', person.name);
+      console.log('[ACTIONS] Calling Claude for:', person.name);
 
       // Build context packet
       const ctxLines: string[] = [
@@ -310,11 +351,11 @@ Reglas estrictas:
       costTracker.track(userId, 'claude-haiku-4-5-20251001', tokensIn, tokensOut, 'actions', Date.now() - start).catch(() => undefined);
 
       const parsed = parseClaudeJson(text);
-      console.log('[generate] Claude done for:', person.name, 'parsed:', !!parsed);
+      console.log('[ACTIONS] Claude done for:', person.name, 'parsed:', !!parsed);
       return parsed ?? buildFallback({ personName: person.name, personOrg: person.organization, reason, urgency: candidate.urgency });
     })
   );
-  console.log('[generate] all Claude calls settled, results:', results.map(r => r.status));
+  console.log('[ACTIONS] All Claude calls settled:', results.map(r => r.status));
 
   // ── 5. Collect successful results ─────────────────────────────────────────
   const toInsert: Array<{
@@ -374,5 +415,6 @@ Reglas estrictas:
     }
   }
 
+  console.log('[ACTIONS] Returning', withPerson.length, 'actions');
   return withPerson.sort(sortByUrgency);
 }
