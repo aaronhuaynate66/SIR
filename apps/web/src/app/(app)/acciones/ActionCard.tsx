@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { Check, Clock, X, TrendingUp, ClipboardCopy, ClipboardCheck, ChevronDown } from 'lucide-react';
 import type { ActionWithPerson } from './generate';
 
 const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
@@ -15,9 +16,8 @@ const PR_LABELS: Record<string, string> = {
   strategic: 'Estratégico', professional: 'Profesional', personal: 'Personal',
   family: 'Familia', networking: 'Networking', developing: 'Desarrollo',
 };
-const URGENCY_COLOR = { high: '#ef4444', medium: '#fbbf24', low: '#34d399' };
-const URGENCY_LABEL = { high: 'URGENTE', medium: 'PRONTO', low: 'FLEXIBLE' };
-const URGENCY_BORDER = { high: '#ef444440', medium: '#fbbf2440', low: '#34d39940' };
+const URGENCY_COLOR = { high: '#ef4444', medium: '#f59e0b', low: '#3b82f6' };
+const URGENCY_LABEL = { high: 'URGENTE', medium: 'PRONTO', low: 'NORMAL' };
 
 interface Props {
   action:     ActionWithPerson;
@@ -28,15 +28,15 @@ interface Props {
 }
 
 export default function ActionCard({ action, onComplete, onPostpone, onDismiss, disabled }: Props) {
-  const [expanded, setExpanded]   = useState(false);
-  const [copied,   setCopied]     = useState(false);
-  const [loading,  setLoading]    = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [copied,   setCopied]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [hovered,  setHovered]  = useState(false);
 
-  const urgencyColor  = URGENCY_COLOR[action.urgency]  ?? '#94a3b8';
-  const urgencyLabel  = URGENCY_LABEL[action.urgency]  ?? action.urgency.toUpperCase();
-  const urgencyBorder = URGENCY_BORDER[action.urgency] ?? '#94a3b840';
-  const typeColor     = PR_COLORS[action.person_type]  ?? '#94a3b8';
-  const typeLabel     = PR_LABELS[action.person_type]  ?? action.person_type;
+  const urgencyColor = URGENCY_COLOR[action.urgency] ?? '#94a3b8';
+  const urgencyLabel = URGENCY_LABEL[action.urgency] ?? action.urgency.toUpperCase();
+  const typeColor    = PR_COLORS[action.person_type]  ?? '#94a3b8';
+  const typeLabel    = PR_LABELS[action.person_type]  ?? action.person_type;
 
   const copyMessage = useCallback(async () => {
     try {
@@ -78,76 +78,83 @@ export default function ActionCard({ action, onComplete, onPostpone, onDismiss, 
   }
 
   return (
-    <div style={{
-      background:  '#1a1d27',
-      border:      `1px solid ${urgencyBorder}`,
-      borderLeft:  `4px solid ${urgencyColor}`,
-      borderRadius: '0 12px 12px 0',
-      padding:     '16px 18px',
-      opacity:     disabled ? 0.6 : 1,
-      transition:  'opacity 0.2s',
-    }}>
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-        {/* Avatar */}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background:    hovered ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+        backdropFilter: 'blur(8px)',
+        border:        `1px solid rgba(255,255,255,${hovered ? '0.12' : '0.07'})`,
+        borderLeft:    `3px solid ${urgencyColor}`,
+        borderRadius:  '0 14px 14px 0',
+        padding:       '20px 22px',
+        opacity:       disabled ? 0.6 : 1,
+        transition:    'all 0.18s ease',
+      }}
+    >
+      {/* Header: avatar + person info + urgency pill */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+        {/* Avatar with type-colored ring */}
         <div style={{
-          width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+          width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
           background: avatarColor(action.person_name),
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: 13, fontWeight: 700,
+          color: '#fff', fontSize: 14, fontWeight: 700,
+          boxShadow: `0 0 0 2px #0d0f1a, 0 0 0 4px ${typeColor}55`,
         }}>
           {initials(action.person_name)}
         </div>
 
-        {/* Person info */}
+        {/* Name + category + role */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>
               {action.person_name}
             </span>
             <span style={{
-              fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
-              background: typeColor + '22', color: typeColor,
-              border: `1px solid ${typeColor}44`,
+              fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+              background: typeColor + '18', color: typeColor,
+              border: `1px solid ${typeColor}30`,
             }}>
               {typeLabel}
             </span>
           </div>
           {(action.person_role ?? action.person_org) && (
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b',
+            <p style={{ margin: 0, fontSize: 12, color: '#64748b',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {[action.person_role, action.person_org].filter(Boolean).join(' · ')}
             </p>
           )}
         </div>
 
-        {/* Urgency badge */}
+        {/* Urgency pill */}
         <span style={{
-          flexShrink: 0, fontSize: 10, fontWeight: 800,
-          padding: '3px 8px', borderRadius: 6,
-          background: urgencyColor + '22', color: urgencyColor,
-          border: `1px solid ${urgencyColor}44`,
-          letterSpacing: '0.05em',
+          flexShrink: 0, fontSize: 10, fontWeight: 700,
+          padding: '4px 11px', borderRadius: 20,
+          background: urgencyColor + '18', color: urgencyColor,
+          border: `1px solid ${urgencyColor}30`,
+          letterSpacing: '0.06em',
         }}>
           {urgencyLabel}
         </span>
       </div>
 
       {/* Action text */}
-      <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: '#e2e8f0', lineHeight: 1.4 }}>
+      <p style={{ margin: '0 0 5px', fontSize: 15, fontWeight: 600, color: '#f1f5f9', lineHeight: 1.4 }}>
         {action.action_text}
       </p>
 
       {/* Why now */}
-      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-        <span style={{ color: '#475569', fontWeight: 600 }}>¿Por qué ahora? </span>
+      <p style={{ margin: '0 0 18px', fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
+        <span style={{ color: '#94a3b8', fontWeight: 600 }}>¿Por qué ahora?&nbsp;</span>
         {action.timing_reason}
       </p>
 
-      {/* Expandable message */}
+      {/* Suggested message — expandable */}
       <div style={{
-        background: '#13151f', border: '1px solid #2a2d3e',
-        borderRadius: 8, marginBottom: 12, overflow: 'hidden',
+        background: 'rgba(0,0,0,0.25)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: 10, marginBottom: 10, overflow: 'hidden',
       }}>
         <button
           type="button"
@@ -156,88 +163,114 @@ export default function ActionCard({ action, onComplete, onPostpone, onDismiss, 
             width: '100%', padding: '10px 14px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: 'none', border: 'none', cursor: 'pointer',
-            color: '#94a3b8', fontSize: 12, fontWeight: 600,
+            color: '#64748b', fontSize: 12, fontWeight: 600,
           }}
         >
-          <span>💬 Mensaje sugerido</span>
-          <span style={{ fontSize: 10, transition: 'transform 0.15s', transform: expanded ? 'rotate(180deg)' : 'none' }}>▼</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ opacity: 0.6 }}>💬</span> Mensaje sugerido
+          </span>
+          <ChevronDown
+            size={13}
+            style={{
+              color: '#475569',
+              transition: 'transform 0.15s',
+              transform: expanded ? 'rotate(180deg)' : 'none',
+            }}
+          />
         </button>
 
         {expanded && (
-          <div style={{ borderTop: '1px solid #2a2d3e', padding: '12px 14px' }}>
-            <p style={{ margin: '0 0 10px', fontSize: 13, color: '#cbd5e1', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-              {action.message_suggestion}
-            </p>
-            <button
-              type="button"
-              onClick={copyMessage}
-              style={{
-                padding: '5px 12px', background: copied ? '#22c55e22' : '#6366f122',
-                border: `1px solid ${copied ? '#22c55e44' : '#6366f144'}`,
-                borderRadius: 6, cursor: 'pointer',
-                fontSize: 11, fontWeight: 600,
-                color: copied ? '#22c55e' : '#818cf8',
-                transition: 'all 0.15s',
-              }}
-            >
-              {copied ? '✓ Copiado' : '📋 Copiar mensaje'}
-            </button>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '12px 14px' }}>
+            <div style={{ position: 'relative' }}>
+              <p style={{
+                margin: 0, paddingRight: 32,
+                fontFamily: 'ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace',
+                fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, whiteSpace: 'pre-wrap',
+              }}>
+                {action.message_suggestion}
+              </p>
+              <button
+                type="button"
+                onClick={copyMessage}
+                title={copied ? 'Copiado' : 'Copiar mensaje'}
+                style={{
+                  position: 'absolute', top: 0, right: 0,
+                  padding: '5px',
+                  background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${copied ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: 6, cursor: 'pointer',
+                  color: copied ? '#22c55e' : '#64748b',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {copied ? <ClipboardCheck size={14} /> : <ClipboardCopy size={14} />}
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Impact prediction */}
+      {/* Impact */}
       <div style={{
-        background: '#6366f10a', border: '1px solid #6366f122',
-        borderRadius: 8, padding: '8px 12px', marginBottom: 14,
+        display: 'flex', alignItems: 'flex-start', gap: 9,
+        background: 'rgba(99,102,241,0.06)',
+        border: '1px solid rgba(99,102,241,0.14)',
+        borderRadius: 10, padding: '10px 14px', marginBottom: 18,
       }}>
-        <p style={{ margin: 0, fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
-          <span style={{ color: '#818cf8', fontWeight: 600 }}>Impacto: </span>
+        <TrendingUp size={13} style={{ color: '#818cf8', flexShrink: 0, marginTop: 2 }} />
+        <p style={{ margin: 0, fontSize: 12, color: '#94a3b8', lineHeight: 1.55 }}>
           {action.impact_prediction}
         </p>
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 6 }}>
         <button
           type="button"
           onClick={handleComplete}
           disabled={loading || disabled}
           style={{
             flex: 2, padding: '8px 12px',
-            background: '#22c55e', border: 'none', borderRadius: 8,
-            color: '#fff', fontSize: 13, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            background: '#16a34a', border: 'none', borderRadius: 8,
+            color: '#fff', fontSize: 13, fontWeight: 600,
             cursor: loading ? 'wait' : 'pointer',
             opacity: loading ? 0.7 : 1, transition: 'opacity 0.15s',
           }}
         >
-          {loading ? '…' : '✓ Hecho'}
+          <Check size={14} strokeWidth={2.5} />
+          {loading ? 'Guardando…' : 'Hecho'}
         </button>
         <button
           type="button"
           onClick={() => handleStatus('postponed')}
           disabled={loading || disabled}
           style={{
-            flex: 1, padding: '8px 8px',
-            background: 'transparent', border: '1px solid #2a2d3e',
+            flex: 1, padding: '8px 10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.09)',
             borderRadius: 8, color: '#64748b', fontSize: 12,
             cursor: loading ? 'wait' : 'pointer',
           }}
         >
-          Posponer
+          <Clock size={12} /> Posponer
         </button>
         <button
           type="button"
           onClick={() => handleStatus('dismissed')}
           disabled={loading || disabled}
           style={{
-            flex: 1, padding: '8px 8px',
-            background: 'transparent', border: '1px solid #2a2d3e',
+            flex: 1, padding: '8px 10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.09)',
             borderRadius: 8, color: '#475569', fontSize: 12,
             cursor: loading ? 'wait' : 'pointer',
           }}
         >
-          Descartar
+          <X size={12} /> Descartar
         </button>
       </div>
     </div>

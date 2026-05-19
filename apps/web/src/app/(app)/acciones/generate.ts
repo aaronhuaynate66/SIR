@@ -146,7 +146,7 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
   // ── 2. Build candidate pool ───────────────────────────────────────────────
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
-  const [relsRes, signalsRes, datesRes, peopleRes] = await Promise.all([
+  const [relsRes, signalsRes, datesRes, peopleRes, userRes] = await Promise.all([
     db.from('relationships')
       .select('person_id, strength, reciprocity, trust_score, stage, last_contact_at, contact_frequency_days')
       .eq('user_id', userId),
@@ -159,24 +159,29 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
       .select('person_id, label, date')
       .eq('user_id', userId),
     db.from('people')
-      .select('id, name, organization, role, relationship_type, slug')
+      .select('id, name, email, organization, role, relationship_type, slug')
       .eq('user_id', userId),
+    db.from('users').select('email').eq('id', userId).single(),
   ]);
 
   type RelRow   = { person_id: string; strength: number; reciprocity: number; trust_score: number; stage: string; last_contact_at: string | null; contact_frequency_days: number | null };
   type SigRow   = { person_id: string | null; signal_type: string | null; created_at: string };
   type DateRow  = { person_id: string; label: string; date: string };
-  type PersonRow = { id: string; name: string; organization: string | null; role: string | null; relationship_type: string; slug: string | null };
+  type PersonRow = { id: string; name: string; email: string | null; organization: string | null; role: string | null; relationship_type: string; slug: string | null };
 
   const rels    = (relsRes.data   ?? []) as RelRow[];
   const signals = (signalsRes.data ?? []) as SigRow[];
   const dates   = (datesRes.data  ?? []) as DateRow[];
-  const people  = (peopleRes.data ?? []) as PersonRow[];
+  const userEmail = (userRes.data as { email?: string } | null)?.email?.toLowerCase() ?? '';
+
+  // Exclude the logged-in user's own contact entry from candidates
+  const people = ((peopleRes.data ?? []) as PersonRow[])
+    .filter(p => !userEmail || (p.email?.toLowerCase() ?? '') !== userEmail);
 
   console.log('[ACTIONS] Relationships:', rels.length);
   console.log('[ACTIONS] Signals with person_id:', signals.filter(s => s.person_id).length);
   console.log('[ACTIONS] Upcoming dates rows:', dates.length);
-  console.log('[ACTIONS] People:', people.length);
+  console.log('[ACTIONS] User email:', userEmail, '— People after self-exclusion:', people.length);
   if (relsRes.error)    console.error('[ACTIONS] relsRes error:', relsRes.error.message);
   if (signalsRes.error) console.error('[ACTIONS] signalsRes error:', signalsRes.error.message);
   if (peopleRes.error)  console.error('[ACTIONS] peopleRes error:', peopleRes.error.message);
@@ -252,34 +257,18 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
 
       return { person, rel, score, urgency, reason, daysSince, sigCount, upcoming: upcoming ?? [] } as Candidate;
     })
-    .filter((c): c is Candidate => c !== null && c.score > 10)
+    .filter((c): c is Candidate =>
+      c !== null &&
+      c.score > 10 &&
+      // Only suggest people we've actually interacted with
+      (c.rel.last_contact_at !== null || c.sigCount > 0)
+    )
     .sort((a, b) => b.score - a.score);
 
   console.log('[ACTIONS] Total candidates after scoring (score>10):', allScored.length,
     allScored.slice(0, 5).map(c => `${c.person.name}(${c.score})`));
 
-  let scored = allScored.slice(0, 3);
-
-  // Fallback: if scoring yielded nothing (e.g. relationships table empty),
-  // pick top 3 people by signal count so we always show something.
-  if (scored.length === 0 && people.length > 0) {
-    console.log('[ACTIONS] Scoring empty → using signal-count fallback');
-    const top3 = [...people]
-      .sort((a, b) => (signalMap.get(b.id) ?? 0) - (signalMap.get(a.id) ?? 0))
-      .slice(0, 3);
-    scored = top3.map(person => ({
-      person,
-      rel: { person_id: person.id, strength: 50, reciprocity: 50, trust_score: 0.5,
-             stage: 'active', last_contact_at: null, contact_frequency_days: 30 } as RelRow,
-      score: 50,
-      urgency: 'medium' as const,
-      reason:  'Mantener el contacto regular',
-      daysSince: null,
-      sigCount:  signalMap.get(person.id) ?? 0,
-      upcoming:  upcomingDates.get(person.id) ?? [],
-    }));
-    console.log('[ACTIONS] Fallback candidates:', scored.map(c => c.person.name));
-  }
+  const scored = allScored.slice(0, 3);
 
   console.log('[ACTIONS] Final scored:', scored.length, scored.map(c => c.person.name));
   if (scored.length === 0) return [];
