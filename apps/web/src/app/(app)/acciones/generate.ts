@@ -234,12 +234,14 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
     })
     .filter((c): c is NonNullable<typeof c> => c !== null && c.score > 10)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .slice(0, 3);
 
+  console.log('[generate] scored candidates:', scored.length, scored.map(c => c.person.name));
   if (scored.length === 0) return [];
 
   // ── 4. Build context + call Claude for each candidate ────────────────────
   const apiKey = process.env['ANTHROPIC_API_KEY'];
+  console.log('[generate] apiKey present:', !!apiKey);
 
   const SYSTEM = `Eres un asesor de relaciones profesionales. Analiza el contexto de esta persona y genera exactamente 5 campos JSON.
 Responde ÚNICAMENTE con JSON válido, sin markdown, sin explicaciones adicionales.
@@ -259,9 +261,11 @@ Reglas estrictas:
 - message_suggestion debe ser copiable y enviable sin edición
 - Idioma: español`;
 
+  console.log('[generate] starting', scored.length, 'Claude calls in parallel');
   const results = await Promise.allSettled(
     scored.map(async candidate => {
       const { person, rel, reason, daysSince, sigCount, upcoming } = candidate;
+      console.log('[generate] calling Claude for:', person.name);
 
       // Build context packet
       const ctxLines: string[] = [
@@ -306,9 +310,11 @@ Reglas estrictas:
       costTracker.track(userId, 'claude-haiku-4-5-20251001', tokensIn, tokensOut, 'actions', Date.now() - start).catch(() => undefined);
 
       const parsed = parseClaudeJson(text);
+      console.log('[generate] Claude done for:', person.name, 'parsed:', !!parsed);
       return parsed ?? buildFallback({ personName: person.name, personOrg: person.organization, reason, urgency: candidate.urgency });
     })
   );
+  console.log('[generate] all Claude calls settled, results:', results.map(r => r.status));
 
   // ── 5. Collect successful results ─────────────────────────────────────────
   const toInsert: Array<{

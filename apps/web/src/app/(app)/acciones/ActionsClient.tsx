@@ -17,6 +17,7 @@ export default function ActionsClient({ initialPending, initialCompleted }: Prop
   const [pending,   setPending]   = useState<ActionWithPerson[]>(initialPending);
   const [completed, setCompleted] = useState<ActionWithPerson[]>(initialCompleted);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const handleComplete = useCallback((id: string, _personId: string) => {
     const action = pending.find(a => a.id === id);
@@ -36,14 +37,22 @@ export default function ActionsClient({ initialPending, initialCompleted }: Prop
   async function handleRefresh() {
     if (refreshing) return;
     setRefreshing(true);
+    setFetchError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25_000);
     try {
-      const res  = await fetch('/api/actions/suggest');
+      const res  = await fetch('/api/actions/suggest', { signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as { actions?: ActionWithPerson[] };
       if (data.actions) {
         const newPending = data.actions.filter(a => a.status === 'pending');
         setPending(newPending);
       }
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      setFetchError(isAbort ? 'Tiempo agotado. Intenta de nuevo.' : 'Error al generar. Intenta de nuevo.');
     } finally {
+      clearTimeout(timeout);
       setRefreshing(false);
     }
   }
@@ -91,6 +100,9 @@ export default function ActionsClient({ initialPending, initialCompleted }: Prop
           >
             {refreshing ? 'Generando…' : 'Generar nuevas acciones'}
           </button>
+          {fetchError && (
+            <p style={{ margin: '10px 0 0', fontSize: 12, color: '#ef4444' }}>{fetchError}</p>
+          )}
         </div>
       )}
 
