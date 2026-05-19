@@ -2,22 +2,22 @@
 
 const CHIPS: { value: string; label: string; color: string }[] = [
   { value: 'all',          label: 'Todos',        color: '#e2e8f0' },
-  { value: 'professional', label: 'Profesional',  color: '#818cf8' },
-  { value: 'networking',   label: 'Networking',   color: '#60a5fa' },
-  { value: 'family',       label: 'Familia',      color: '#ec4899' },
-  { value: 'personal',     label: 'Personal',     color: '#34d399' },
-  { value: 'strategic',    label: 'Estratégico',  color: '#fbbf24' },
-  { value: 'developing',   label: 'Desarrollo',   color: '#94a3b8' },
+  { value: 'strategic',    label: 'Estratégico',  color: '#f59e0b' },
+  { value: 'professional', label: 'Profesional',  color: '#3b82f6' },
+  { value: 'personal',     label: 'Personal',     color: '#22c55e' },
+  { value: 'family',       label: 'Familia',      color: '#ef4444' },
+  { value: 'networking',   label: 'Networking',   color: '#94a3b8' },
+  { value: 'developing',   label: 'Desarrollo',   color: '#64748b' },
 ];
 
 interface Props {
-  filterType: string;
-  minStrength: number;
-  onFilterType: (v: string) => void;
-  onMinStrength: (v: number) => void;
+  filterType:    string;
+  minHealth:     number;
+  onFilterType:  (v: string) => void;
+  onMinHealth:   (v: number) => void;
 }
 
-export default function GraphControls({ filterType, minStrength, onFilterType, onMinStrength }: Props) {
+export default function GraphControls({ filterType, minHealth, onFilterType, onMinHealth }: Props) {
   return (
     <div style={{
       position: 'absolute', top: 12, left: 12, zIndex: 10,
@@ -49,17 +49,17 @@ export default function GraphControls({ filterType, minStrength, onFilterType, o
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#94a3b8', userSelect: 'none' }}>
-        Fuerza mín.
+        Salud mín.
         <input
           type="range"
           min={0}
           max={90}
           step={10}
-          value={minStrength}
-          onChange={e => onMinStrength(Number(e.target.value))}
+          value={minHealth}
+          onChange={e => onMinHealth(Number(e.target.value))}
           style={{ width: 80, accentColor: '#6366f1', cursor: 'pointer' }}
         />
-        <span style={{ color: '#e2e8f0', minWidth: 22, fontWeight: 600 }}>{minStrength}</span>
+        <span style={{ color: '#e2e8f0', minWidth: 22, fontWeight: 600 }}>{minHealth}</span>
       </label>
     </div>
   );

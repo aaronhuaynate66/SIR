@@ -20,38 +20,61 @@ import type { DbPerson, DbRelationship } from '@sir/db';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface GraphProps {
-  userName: string;
-  people: DbPerson[];
+  userName:     string;
+  people:       DbPerson[];
   relationships: DbRelationship[];
+  signalCounts:  Record<string, number>;
 }
 
 interface PersonNodeData {
-  person: DbPerson;
-  rel:    DbRelationship | null;
+  person:      DbPerson;
+  rel:         DbRelationship | null;
+  signalCount: number;
+  healthScore: number;
 }
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
 const PR_COLOR: Record<string, string> = {
-  professional: '#818cf8',
-  networking:   '#60a5fa',
-  family:       '#ec4899',
-  personal:     '#34d399',
-  strategic:    '#fbbf24',
-  developing:   '#94a3b8',
+  strategic:    '#f59e0b',  // dorado
+  professional: '#3b82f6',  // azul
+  personal:     '#22c55e',  // verde
+  family:       '#ef4444',  // rojo
+  networking:   '#94a3b8',  // gris
+  developing:   '#64748b',  // gris oscuro
 };
 
 const PR_LABEL: Record<string, string> = {
-  professional: 'Profesional',
-  networking:   'Red',
-  family:       'Familia',
-  personal:     'Personal',
   strategic:    'Estratégico',
+  professional: 'Profesional',
+  personal:     'Personal',
+  family:       'Familia',
+  networking:   'Networking',
   developing:   'Desarrollando',
 };
 
 function prColor(t: string | undefined): string {
   return PR_COLOR[t ?? ''] ?? '#94a3b8';
+}
+
+// ─── Health score ─────────────────────────────────────────────────────────────
+
+function computeHealth(rel: DbRelationship | null): number {
+  if (!rel) return 0;
+  let freqScore = 50;
+  if (rel.last_contact_at) {
+    const days     = (Date.now() - new Date(rel.last_contact_at).getTime()) / 86_400_000;
+    const expected = rel.contact_frequency_days ?? 30;
+    freqScore      = Math.max(0, Math.min(100, 100 - (days / expected) * 50));
+  }
+  return Math.round(freqScore * 0.4 + (rel.strength ?? 50) * 0.6);
+}
+
+// ─── Node size from signal count ─────────────────────────────────────────────
+
+function nodeSize(signalCount: number): number {
+  // 40px (0 signals) → 68px (10+ signals), capped
+  return Math.round(40 + Math.min(signalCount, 10) * 2.8);
 }
 
 // ─── Cycle helpers ────────────────────────────────────────────────────────────
@@ -101,19 +124,21 @@ function UserNode({ data }: NodeProps<{ label: string }>) {
 // ─── Custom: person node ──────────────────────────────────────────────────────
 
 function PersonNode({ data, selected }: NodeProps<PersonNodeData>) {
-  const { person, rel } = data;
+  const { person, rel, signalCount, healthScore } = data;
   const [hovered, setHovered] = useState(false);
 
   const initials = person.name.split(' ')
     .slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
-  const col      = prColor(person.relationship_type);
-  const strength = rel?.strength ?? 50;
-  const bw       = Math.max(2, Math.round(strength / 22));
+  const col  = prColor(person.relationship_type);
+  const size = nodeSize(signalCount);
+  const bw   = Math.max(2, Math.round((rel?.strength ?? 50) / 22));
 
   const isPrivate = person.relationship_type === 'personal' || person.relationship_type === 'family';
   const cycleDay  = isPrivate && (person as unknown as { cycle_data?: { last_period_start?: string } }).cycle_data?.last_period_start
     ? getCycleDay((person as unknown as { cycle_data: { last_period_start: string } }).cycle_data.last_period_start)
     : null;
+
+  const healthColor = healthScore >= 70 ? '#34d399' : healthScore >= 40 ? '#fbbf24' : '#f87171';
 
   return (
     <>
@@ -123,37 +148,61 @@ function PersonNode({ data, selected }: NodeProps<PersonNodeData>) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Avatar circle */}
+        {/* Avatar circle — size proportional to signal count */}
         <div style={{
-          width: 52, height: 52, borderRadius: '50%',
+          width: size, height: size, borderRadius: '50%',
           background: col + '18',
           border: `${bw}px solid ${selected ? '#fff' : col}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#e2e8f0', fontWeight: 700, fontSize: 16,
+          color: '#e2e8f0', fontWeight: 700, fontSize: Math.round(size * 0.28),
           boxShadow: selected ? `0 0 14px ${col}55` : 'none',
           transition: 'all 0.15s',
         }}>
           {initials}
         </div>
 
+        {/* Health dot */}
+        {healthScore > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 22, right: -2,
+            width: 9, height: 9, borderRadius: '50%',
+            background: healthColor,
+            border: '1.5px solid #12141f',
+            zIndex: 5,
+          }} title={`Salud: ${healthScore}`} />
+        )}
+
         {/* Cycle phase badge */}
         {cycleDay !== null && (
           <div style={{
             position: 'absolute', top: -2, right: -2,
-            width: 14, height: 14, borderRadius: '50%',
+            width: 12, height: 12, borderRadius: '50%',
             background: cycleColor(cycleDay),
             border: '2px solid #12141f',
             zIndex: 5,
           }} title={`${cycleName(cycleDay)} · Día ${cycleDay}`} />
         )}
 
-        {/* Name */}
+        {/* Name label */}
         <span style={{
-          fontSize: 11, color: '#94a3b8', maxWidth: 78,
+          fontSize: 10, color: '#94a3b8', maxWidth: 80,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center',
         }}>
           {person.name.split(' ')[0]}
         </span>
+
+        {/* Signal count badge */}
+        {signalCount > 0 && (
+          <span style={{
+            position: 'absolute', top: -4, left: -4,
+            fontSize: 9, fontWeight: 700, lineHeight: 1,
+            background: '#6366f1', color: '#fff',
+            borderRadius: 6, padding: '1px 4px',
+            zIndex: 5,
+          }}>
+            {signalCount}
+          </span>
+        )}
 
         {/* Hover mini-card */}
         {hovered && (
@@ -186,13 +235,14 @@ function PersonNode({ data, selected }: NodeProps<PersonNodeData>) {
                 <span style={{ fontSize: 11, color: '#94a3b8' }}>{cycleName(cycleDay)} · Día {cycleDay}</span>
               </div>
             )}
-            <div style={{ marginTop: 7, paddingTop: 6, borderTop: '1px solid #2a2d3e', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ marginTop: 7, paddingTop: 6, borderTop: '1px solid #2a2d3e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 10, background: col + '22', color: col, borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>
                 {PR_LABEL[person.relationship_type] ?? person.relationship_type}
               </span>
-              <span style={{ fontSize: 10, color: '#334155' }}>
-                Fuerza {strength}
-              </span>
+              <div style={{ display: 'flex', gap: 8, fontSize: 10, color: '#475569' }}>
+                <span>Salud {healthScore}</span>
+                {signalCount > 0 && <span>· {signalCount} señal{signalCount !== 1 ? 'es' : ''}</span>}
+              </div>
             </div>
           </div>
         )}
@@ -208,19 +258,21 @@ const nodeTypes = { user: UserNode, person: PersonNode };
 // ─── Graph builder ────────────────────────────────────────────────────────────
 
 function buildGraph(
-  userName: string,
-  people: DbPerson[],
+  userName:     string,
+  people:       DbPerson[],
   relationships: DbRelationship[],
-  filterType: string,
-  minStrength: number,
+  signalCounts:  Record<string, number>,
+  filterType:   string,
+  minHealth:    number,
 ): { nodes: Node[]; edges: Edge[] } {
   const relMap = new Map<string, DbRelationship>();
   for (const rel of relationships) relMap.set(rel.person_id, rel);
 
   const visible = people.filter(p => {
     if (filterType !== 'all' && p.relationship_type !== filterType) return false;
-    const s = relMap.get(p.id)?.strength ?? 50;
-    return s >= minStrength;
+    const rel   = relMap.get(p.id) ?? null;
+    const score = computeHealth(rel);
+    return score >= minHealth;
   });
 
   const center: Node = {
@@ -235,12 +287,15 @@ function buildGraph(
   const R = Math.max(300, visible.length * 52);
 
   const personNodes: Node[] = visible.map((person, i) => {
-    const angle = (i / visible.length) * 2 * Math.PI - Math.PI / 2;
+    const angle       = (i / visible.length) * 2 * Math.PI - Math.PI / 2;
+    const rel         = relMap.get(person.id) ?? null;
+    const signalCount = signalCounts[person.id] ?? 0;
+    const healthScore = computeHealth(rel);
     return {
       id:       person.id,
       type:     'person',
       position: { x: Math.cos(angle) * R, y: Math.sin(angle) * R },
-      data:     { person, rel: relMap.get(person.id) ?? null } as PersonNodeData,
+      data:     { person, rel, signalCount, healthScore } satisfies PersonNodeData,
       style:    { overflow: 'visible', background: 'transparent', border: 'none', padding: 0 },
     };
   });
@@ -253,11 +308,11 @@ function buildGraph(
       id:       `e-${person.id}`,
       source:   '__user__',
       target:   person.id,
-      style:    { strokeWidth: Math.max(1.5, strength / 22), stroke: col, opacity: 0.55 },
+      style:    { strokeWidth: Math.max(1.5, strength / 22), stroke: col, opacity: 0.45 },
       animated: person.relationship_type === 'strategic',
       label:    PR_LABEL[person.relationship_type],
-      labelStyle:   { fontSize: 9, fill: col, fontWeight: 700 },
-      labelBgStyle: { fill: '#12141f', fillOpacity: 0.85 },
+      labelStyle:     { fontSize: 9, fill: col, fontWeight: 700 },
+      labelBgStyle:   { fill: '#12141f', fillOpacity: 0.85 },
       labelBgPadding: [4, 3] as [number, number],
     };
   });
@@ -267,15 +322,18 @@ function buildGraph(
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function RelationshipGraph({ userName, people, relationships }: GraphProps) {
+export default function RelationshipGraph({ userName, people, relationships, signalCounts }: GraphProps) {
   const [filterType, setFilterType] = useState('all');
-  const [minStrength, setMinStrength] = useState(0);
-  const [selected, setSelected] = useState<PersonNodeData | null>(null);
+  const [minHealth,  setMinHealth]  = useState(0);
+  const [selected,   setSelected]   = useState<PersonNodeData | null>(null);
 
   const { nodes, edges } = useMemo(
-    () => buildGraph(userName, people, relationships, filterType, minStrength),
-    [userName, people, relationships, filterType, minStrength],
+    () => buildGraph(userName, people, relationships, signalCounts, filterType, minHealth),
+    [userName, people, relationships, signalCounts, filterType, minHealth],
   );
+
+  // Visible count = nodes minus the center user node
+  const visibleCount = nodes.length - 1;
 
   const onNodeClick: NodeMouseHandler = useCallback((_evt, node) => {
     if (node.id === '__user__') { setSelected(null); return; }
@@ -289,9 +347,9 @@ export default function RelationshipGraph({ userName, people, relationships }: G
     <div style={{ position: 'relative', height: '78vh', borderRadius: 14, overflow: 'hidden', background: '#0d0f1a', border: '1px solid #2a2d3e' }}>
       <GraphControls
         filterType={filterType}
-        minStrength={minStrength}
+        minHealth={minHealth}
         onFilterType={setFilterType}
-        onMinStrength={setMinStrength}
+        onMinHealth={setMinHealth}
       />
 
       <ReactFlow
@@ -319,14 +377,35 @@ export default function RelationshipGraph({ userName, people, relationships }: G
         <SidePanel data={selected} onClose={() => setSelected(null)} />
       )}
 
+      {/* Empty: no contacts at all after server filter */}
       {people.length === 0 && (
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
         }}>
           <span style={{ fontSize: 36, opacity: 0.4 }}>◎</span>
-          <p style={{ color: '#475569', fontSize: 15, margin: 0 }}>Agrega personas para ver tu grafo</p>
-          <p style={{ color: '#334155', fontSize: 13, margin: 0 }}>Ve a Personas → Agregar contacto</p>
+          <p style={{ color: '#475569', fontSize: 15, margin: 0, textAlign: 'center', maxWidth: 360 }}>
+            Tu grafo se llenará cuando interactúes con tus contactos.
+          </p>
+          <p style={{ color: '#334155', fontSize: 13, margin: 0, textAlign: 'center', maxWidth: 360 }}>
+            Registra memorias o señales para ver las conexiones.
+          </p>
+        </div>
+      )}
+
+      {/* Empty: contacts exist but all filtered out by controls */}
+      {people.length > 0 && visibleCount === 0 && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          <span style={{ fontSize: 30, opacity: 0.4 }}>◎</span>
+          <p style={{ color: '#475569', fontSize: 14, margin: 0 }}>
+            Ningún contacto cumple los filtros actuales.
+          </p>
+          <p style={{ color: '#334155', fontSize: 12, margin: 0 }}>
+            Baja el umbral de salud o cambia el tipo de relación.
+          </p>
         </div>
       )}
     </div>
@@ -336,7 +415,7 @@ export default function RelationshipGraph({ userName, people, relationships }: G
 // ─── Side Panel ───────────────────────────────────────────────────────────────
 
 function SidePanel({ data, onClose }: { data: PersonNodeData; onClose: () => void }) {
-  const { person, rel } = data;
+  const { person, rel, signalCount, healthScore } = data;
   const col = prColor(person.relationship_type);
 
   const isPrivate = person.relationship_type === 'personal' || person.relationship_type === 'family';
@@ -371,8 +450,22 @@ function SidePanel({ data, onClose }: { data: PersonNodeData; onClose: () => voi
         </p>
       )}
       {person.email && (
-        <p style={{ margin: '0 0 16px', color: '#475569', fontSize: 12 }}>{person.email}</p>
+        <p style={{ margin: '0 0 12px', color: '#475569', fontSize: 12 }}>{person.email}</p>
       )}
+
+      {/* Interaction stats */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+        <div style={{ flex: 1, background: '#13151f', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#e2e8f0' }}>{signalCount}</p>
+          <p style={{ margin: 0, fontSize: 10, color: '#475569' }}>señales</p>
+        </div>
+        <div style={{ flex: 1, background: '#13151f', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: healthScore >= 70 ? '#34d399' : healthScore >= 40 ? '#fbbf24' : '#f87171' }}>
+            {healthScore}
+          </p>
+          <p style={{ margin: 0, fontSize: 10, color: '#475569' }}>salud</p>
+        </div>
+      </div>
 
       {/* Cycle phase */}
       {cycleDay !== null && (
