@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import SearchModal from './SearchModal';
+import { useTracker } from '@/lib/useTracker';
 
 interface NavItem {
   href:   string;
@@ -41,6 +42,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { track } = useTracker();
   const NAV = buildNav(unreadCount);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -105,7 +107,7 @@ export default function Sidebar({
           {NAV.map(({ href, label, icon, badge, pro }) => {
             const active = pathname === href || pathname.startsWith(href + '/');
             return (
-              <Link key={href} href={href} style={{
+              <Link key={href} href={href} onClick={() => track('sidebar_nav', { destination: href })} style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,

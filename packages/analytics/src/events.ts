@@ -26,6 +26,19 @@ export const EVENTS = {
   GRAPH_VIEWED:   'graph_viewed',
   GRAPH_FILTERED: 'graph_filtered',
   NODE_HOVERED:   'node_hovered',
+  // Actions
+  ACTION_COMPLETED:  'action_completed',
+  ACTION_DISMISSED:  'action_dismissed',
+  ACTION_POSTPONED:  'action_postponed',
+  ACTIONS_GENERATED: 'actions_generated',
+  // Search
+  SEARCH_USED:       'search_used',
+  // Integrations
+  GOOGLE_IMPORT_COMPLETED:    'google_import_completed',
+  MICROSOFT_IMPORT_COMPLETED: 'microsoft_import_completed',
+  WHATSAPP_IMPORT_COMPLETED:  'whatsapp_import_completed',
+  // Navigation
+  PAGE_VIEW:     'page_view',
   // Engagement
   INTERACTION_REGISTERED: 'interaction_registered',
   SIDEBAR_NAV:            'sidebar_nav',

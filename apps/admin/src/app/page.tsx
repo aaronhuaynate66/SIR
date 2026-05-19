@@ -35,10 +35,13 @@ async function getDashboardData() {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
+  const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
+
   const [
     layerCounts,
     totalSignals,
     totalUsers,
+    newUsersWeek,
     pendingSignals,
     todaySignals,
     totalMemories,
@@ -46,6 +49,11 @@ async function getDashboardData() {
     totalRelationships,
     todayHumanStates,
     recentSignals,
+    actionsPending,
+    actionsCompleted,
+    actionsDismissed,
+    briefingsToday,
+    aiCostRes,
   ] = await Promise.all([
     Promise.all(
       LAYERS.map(async ({ layer }) => {
@@ -58,6 +66,7 @@ async function getDashboardData() {
     ),
     db.from('signals').select('*', { count: 'exact', head: true }),
     db.from('users').select('*', { count: 'exact', head: true }),
+    db.from('users').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
     db.from('signals').select('*', { count: 'exact', head: true }).eq('processed', false),
     db.from('signals').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
     db.from('memories').select('*', { count: 'exact', head: true }),
@@ -68,12 +77,20 @@ async function getDashboardData() {
       .select('id, type, user_id, created_at, processed')
       .order('created_at', { ascending: false })
       .limit(12),
+    db.from('action_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    db.from('action_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+    db.from('action_suggestions').select('*', { count: 'exact', head: true }).eq('status', 'dismissed'),
+    db.from('briefing_logs').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
+    db.from('ai_usage').select('cost_usd').gte('created_at', todayStart),
   ]);
+
+  const aiCostToday = (aiCostRes.data ?? []).reduce((sum, r) => sum + Number((r as { cost_usd?: unknown }).cost_usd ?? 0), 0);
 
   return {
     layerCounts,
     totalSignals:       totalSignals.count       ?? 0,
     totalUsers:         totalUsers.count         ?? 0,
+    newUsersWeek:       newUsersWeek.count        ?? 0,
     pendingSignals:     pendingSignals.count      ?? 0,
     todaySignals:       todaySignals.count        ?? 0,
     totalMemories:      totalMemories.count       ?? 0,
@@ -83,6 +100,11 @@ async function getDashboardData() {
     recentSignals:      (recentSignals.data ?? []) as Array<{
       id: string; type: string; user_id: string; created_at: string; processed: boolean;
     }>,
+    actionsPending:   actionsPending.count   ?? 0,
+    actionsCompleted: actionsCompleted.count ?? 0,
+    actionsDismissed: actionsDismissed.count ?? 0,
+    briefingsToday:   briefingsToday.count   ?? 0,
+    aiCostToday,
   };
 }
 
@@ -106,20 +128,28 @@ export default async function DashboardPage() {
         <span style={{ fontSize: 12, color: '#9ca3af' }}>Actualizado: {new Date().toLocaleTimeString('es')}</span>
       </div>
 
-      {/* KPIs — row 1: usuarios / señales */}
+      {/* KPIs — row 1: usuarios */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
-        <KpiCard label="Usuarios"           value={d.totalUsers}         color="#6366f1" />
-        <KpiCard label="Señales totales"    value={d.totalSignals}       color="#10b981" />
-        <KpiCard label="Señales hoy"        value={d.todaySignals}       color="#3b82f6" />
-        <KpiCard label="Pendientes"         value={d.pendingSignals}     color="#f59e0b" sub="por procesar" />
+        <KpiCard label="Usuarios totales"   value={d.totalUsers}         color="#6366f1" sub={`+${d.newUsersWeek} esta semana`} />
+        <KpiCard label="Personas importadas" value={d.totalPeople}       color="#ec4899" sub={`avg ${d.totalUsers > 0 ? Math.round(d.totalPeople / d.totalUsers) : 0}/user`} />
+        <KpiCard label="Relaciones"         value={d.totalRelationships} color="#14b8a6" />
+        <KpiCard label="Memorias"           value={d.totalMemories}      color="#8b5cf6" />
       </div>
 
-      {/* KPIs — row 2: datos */}
+      {/* KPIs — row 2: actividad */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
+        <KpiCard label="Señales hoy"        value={d.todaySignals}       color="#10b981" sub={`${d.totalSignals} totales`} />
+        <KpiCard label="Briefings hoy"      value={d.briefingsToday}     color="#3b82f6" sub={`$${d.aiCostToday.toFixed(4)} costo AI`} />
+        <KpiCard label="Acciones pendientes" value={d.actionsPending}    color="#f59e0b" />
+        <KpiCard label="Acciones completadas" value={d.actionsCompleted} color="#22c55e" sub={`${d.actionsDismissed} descartadas`} />
+      </div>
+
+      {/* KPIs — row 3: sistema */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 32 }}>
-        <KpiCard label="Memorias"           value={d.totalMemories}      color="#8b5cf6" />
-        <KpiCard label="Personas"           value={d.totalPeople}        color="#ec4899" />
-        <KpiCard label="Relaciones"         value={d.totalRelationships} color="#14b8a6" />
-        <KpiCard label="Estados hoy"        value={d.todayHumanStates}   color="#f97316" sub="human state logs" />
+        <KpiCard label="Señales por procesar" value={d.pendingSignals}   color="#ef4444" sub="sin procesar" />
+        <KpiCard label="Estados hoy"          value={d.todayHumanStates} color="#f97316" sub="human state logs" />
+        <KpiCard label="Señales totales"      value={d.totalSignals}     color="#94a3b8" />
+        <KpiCard label="Acciones descartadas" value={d.actionsDismissed} color="#6b7280" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>

@@ -1,6 +1,7 @@
 import { type NextRequest } from 'next/server';
 import { createServerSupabase, getServiceClient } from '@/lib/supabase-server';
 import { getValidToken, type GoogleIntegration } from '../_lib';
+import { trackServerEvent, EVENTS } from '@sir/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -168,6 +169,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     .from('people')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id);
+
+  trackServerEvent(user.id, EVENTS.GOOGLE_IMPORT_COMPLETED, {
+    created: totalCreated,
+    updated: totalUpdated,
+    skipped: totalSkipped,
+    total_contacts: totalAfter,
+  });
 
   return Response.json({
     created: totalCreated,

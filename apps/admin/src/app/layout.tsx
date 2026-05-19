@@ -4,16 +4,19 @@ export const metadata = {
 };
 
 const NAV_LINKS = [
-  { href: '/',            label: 'Dashboard'  },
-  { href: '/users',       label: 'Usuarios'   },
-  { href: '/waitlist',    label: 'Waitlist'   },
-  { href: '/beta',        label: 'Beta'       },
-  { href: '/memories',    label: 'Memorias'   },
-  { href: '/signals',     label: 'Señales'    },
-  { href: '/analytics',   label: 'Analytics'  },
-  { href: '/costs',       label: 'Costos AI'  },
-  { href: '/ai-usage',    label: 'AI Detalle' },
-  { href: '/monitoring',  label: 'Monitoring' },
+  { href: '/',               label: 'Dashboard'     },
+  { href: '/users',          label: 'Usuarios'      },
+  { href: '/health',         label: 'Health'        },
+  { href: '/activity',       label: 'Activity'      },
+  { href: '/feature-usage',  label: 'Features'      },
+  { href: '/waitlist',       label: 'Waitlist'      },
+  { href: '/beta',           label: 'Beta'          },
+  { href: '/memories',       label: 'Memorias'      },
+  { href: '/signals',        label: 'Señales'       },
+  { href: '/analytics',      label: 'Analytics'     },
+  { href: '/costs',          label: 'Costos AI'     },
+  { href: '/ai-usage',       label: 'AI Detalle'    },
+  { href: '/monitoring',     label: 'Monitoring'    },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

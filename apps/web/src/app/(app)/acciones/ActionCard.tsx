@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Check, Clock, X, TrendingUp, ClipboardCopy, ClipboardCheck, ChevronDown } from 'lucide-react';
 import type { ActionWithPerson } from './generate';
+import { useTracker } from '@/lib/useTracker';
 
 const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 function avatarColor(name: string) { return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length] ?? '#6366f1'; }
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function ActionCard({ action, onComplete, onPostpone, onDismiss, disabled }: Props) {
+  const { track } = useTracker();
   const [expanded, setExpanded] = useState(false);
   const [copied,   setCopied]   = useState(false);
   const [loading,  setLoading]  = useState(false);
@@ -55,6 +57,7 @@ export default function ActionCard({ action, onComplete, onPostpone, onDismiss, 
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ actionId: action.id, personId: action.person_id }),
       });
+      track('action_completed', { urgency: action.urgency, person_type: action.person_type });
       onComplete(action.id, action.person_id);
     } finally {
       setLoading(false);
@@ -70,6 +73,8 @@ export default function ActionCard({ action, onComplete, onPostpone, onDismiss, 
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ actionId: action.id, status }),
       });
+      track(status === 'postponed' ? 'action_postponed' : 'action_dismissed',
+        { urgency: action.urgency, person_type: action.person_type });
       if (status === 'postponed') onPostpone(action.id);
       else onDismiss(action.id);
     } finally {

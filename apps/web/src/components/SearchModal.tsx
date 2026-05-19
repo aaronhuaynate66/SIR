@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import type { GlobalSearchResult } from '@/app/api/search/route';
+import { useTracker } from '@/lib/useTracker';
 
 const SIGNAL_TYPE_LABELS: Record<string, string> = {
   relationship: 'nueva relación', job_change: 'cambio de trabajo',
@@ -19,6 +20,7 @@ interface Props {
 
 export default function SearchModal({ open, onClose }: Props) {
   const router = useRouter();
+  const { track } = useTracker();
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -51,12 +53,13 @@ export default function SearchModal({ open, onClose }: Props) {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       const data = await res.json() as GlobalSearchResult;
       setResults(data);
+      track('search_used', { query_length: q.length });
     } catch {
       setResults(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [track]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
