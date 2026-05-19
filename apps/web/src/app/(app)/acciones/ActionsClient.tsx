@@ -14,6 +14,7 @@ interface Props {
 }
 
 export default function ActionsClient({ initialPending, initialCompleted }: Props) {
+  console.log('[CLIENT] Received props — pending:', initialPending.length, 'completed:', initialCompleted.length);
   const [pending,   setPending]   = useState<ActionWithPerson[]>(initialPending);
   const [completed, setCompleted] = useState<ActionWithPerson[]>(initialCompleted);
   const [refreshing, setRefreshing] = useState(false);

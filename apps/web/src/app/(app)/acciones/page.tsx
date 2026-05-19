@@ -16,8 +16,13 @@ export default async function AccionesPage() {
     console.error('[AccionesPage] generateDailyActions error:', err);
   }
 
+  console.log('[PAGE] Actions received:', actions.length,
+    JSON.stringify(actions.map(a => ({ id: a.id, status: a.status, urgency: a.urgency }))));
+
   const pending   = actions.filter(a => a.status === 'pending');
   const completed = actions.filter(a => a.status === 'completed');
+
+  console.log('[PAGE] Pending:', pending.length, 'Completed:', completed.length);
 
   const highCount = pending.filter(a => a.urgency === 'high').length;
 

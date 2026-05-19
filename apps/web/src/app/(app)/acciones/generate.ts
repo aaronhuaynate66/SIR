@@ -126,7 +126,9 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
 
   console.log('[ACTIONS] Cached today:', existing?.length ?? 0);
   if (existing && existing.length > 0) {
-    return (existing as RawRow[]).map(r => ({
+    const statuses = (existing as RawRow[]).map(r => r.status);
+    console.log('[ACTIONS] Cached statuses:', JSON.stringify(statuses));
+    const cached = (existing as RawRow[]).map(r => ({
       ...r,
       urgency:    r.urgency    as ActionWithPerson['urgency'],
       status:     r.status     as ActionWithPerson['status'],
@@ -136,6 +138,9 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
       person_type: r.people?.relationship_type ?? 'networking',
       person_slug: r.people?.slug             ?? null,
     })).sort(sortByUrgency);
+    console.log('[ACTIONS] Returning cached:', cached.length,
+      JSON.stringify(cached.map(a => ({ id: a.id, status: a.status, person_id: a.person_id }))));
+    return cached;
   }
 
   // ── 2. Build candidate pool ───────────────────────────────────────────────
