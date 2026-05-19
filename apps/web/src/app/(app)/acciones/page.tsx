@@ -73,7 +73,11 @@ export default async function AccionesPage() {
         </div>
       </div>
 
-      <ActionsClient initialPending={pending} initialCompleted={completed} />
+      <ActionsClient
+        key={actions.map(a => a.id).join(',')}
+        initialPending={pending}
+        initialCompleted={completed}
+      />
     </div>
   );
 }

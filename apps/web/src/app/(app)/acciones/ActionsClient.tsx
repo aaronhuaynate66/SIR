@@ -20,6 +20,9 @@ export default function ActionsClient({ initialPending, initialCompleted }: Prop
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // Diagnostic: confirm state matches props on every render
+  console.log('[CLIENT] pending state length:', pending.length, '— hasPending will be:', pending.length > 0);
+
   const handleComplete = useCallback((id: string, _personId: string) => {
     const action = pending.find(a => a.id === id);
     if (!action) return;
