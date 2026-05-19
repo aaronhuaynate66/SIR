@@ -3,30 +3,32 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase-browser';
 import SearchModal from './SearchModal';
 
 interface NavItem {
-  href:  string;
-  label: string;
-  icon:  string;
+  href:   string;
+  label:  string;
+  icon:   React.ReactNode;
   badge?: number;
-  pro?:  boolean;
+  pro?:   boolean;
 }
 
 function buildNav(unreadCount: number): NavItem[] {
   return [
-    { href: '/inicio',        label: 'Inicio',    icon: '⊞' },
-    { href: '/red',           label: 'Red',       icon: '◎' },
-    { href: '/grafo',         label: 'Grafo',     icon: '◯' },
-    { href: '/senales',       label: 'Señales',   icon: '◆' },
-    { href: '/memorias',      label: 'Memorias',  icon: '◈' },
-    { href: '/estado',        label: 'Estado',    icon: '◉' },
-    { href: '/executive',     label: 'Executive', icon: '◈', pro: true },
-    { href: '/rituales',         label: 'Rituales',      icon: '🔔' },
-    { href: '/notifications',    label: 'Alertas',       icon: '🔕', ...(unreadCount > 0 ? { badge: unreadCount } : {}) },
+    { href: '/inicio',              label: 'Inicio',        icon: '⊞' },
+    { href: '/acciones',            label: 'Acciones',      icon: <Zap size={15} /> },
+    { href: '/red',                 label: 'Red',           icon: '◎' },
+    { href: '/grafo',               label: 'Grafo',         icon: '◯' },
+    { href: '/senales',             label: 'Señales',       icon: '◆' },
+    { href: '/memorias',            label: 'Memorias',      icon: '◈' },
+    { href: '/estado',              label: 'Estado',        icon: '◉' },
+    { href: '/executive',           label: 'Executive',     icon: '◈', pro: true },
+    { href: '/rituales',            label: 'Rituales',      icon: '🔔' },
+    { href: '/notifications',       label: 'Alertas',       icon: '🔕', ...(unreadCount > 0 ? { badge: unreadCount } : {}) },
     { href: '/config/integraciones', label: 'Integraciones', icon: '🔗' },
-    { href: '/config',               label: 'Config',        icon: '⚙' },
+    { href: '/config',              label: 'Config',        icon: '⚙' },
   ];
 }
 
@@ -117,7 +119,7 @@ export default function Sidebar({
                 fontWeight: active ? 600 : 400,
                 transition: 'all 0.15s',
               }}>
-                <span style={{ fontSize: 16 }}>{icon}</span>
+                <span style={{ fontSize: 16, display: 'flex', alignItems: 'center' }}>{icon}</span>
                 <span style={{ flex: 1 }}>{label}</span>
                 {pro && (
                   <span style={{ fontSize: 9, fontWeight: 700, background: '#6366f133', color: '#818cf8', borderRadius: 4, padding: '1px 5px' }}>
