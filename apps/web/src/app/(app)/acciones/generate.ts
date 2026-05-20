@@ -180,15 +180,26 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
   const userFullName = (userRow?.raw_user_meta_data?.full_name ?? userRow?.raw_user_meta_data?.name ?? '').toLowerCase();
   const userFirstName = userFullName.split(' ')[0] ?? '';
 
+  const allPeople = (peopleRes.data ?? []) as PersonRow[];
+  console.log('[ACTIONS] Self-exclusion check:', JSON.stringify({
+    userEmail,
+    userFirstName,
+    candidates: allPeople.map(p => ({
+      name:          p.name,
+      email:         p.email,
+      wouldExclude:  (userEmail.length > 0 && (p.email?.toLowerCase() ?? '') === userEmail) ||
+                     (userFirstName.length > 2 && p.name.toLowerCase().includes(userFirstName)),
+    })),
+  }));
+
   // Exclude self by email OR first name (contact may have a different/null email)
-  const people = ((peopleRes.data ?? []) as PersonRow[])
-    .filter(p => {
-      const pEmail = p.email?.toLowerCase() ?? '';
-      const pName  = p.name.toLowerCase();
-      const emailMatch = userEmail.length > 0 && pEmail === userEmail;
-      const nameMatch  = userFirstName.length > 2 && pName.includes(userFirstName);
-      return !emailMatch && !nameMatch;
-    });
+  const people = allPeople.filter(p => {
+    const pEmail = p.email?.toLowerCase() ?? '';
+    const pName  = p.name.toLowerCase();
+    const emailMatch = userEmail.length > 0 && pEmail === userEmail;
+    const nameMatch  = userFirstName.length > 2 && pName.includes(userFirstName);
+    return !emailMatch && !nameMatch;
+  });
 
   console.log('[ACTIONS] Relationships:', rels.length);
   console.log('[ACTIONS] Signals with person_id:', signals.filter(s => s.person_id).length);
