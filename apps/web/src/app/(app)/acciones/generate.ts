@@ -162,7 +162,7 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
     db.from('people')
       .select('id, name, email, organization, role, relationship_type, slug')
       .eq('user_id', userId),
-    db.from('users').select('email').eq('id', userId).single(),
+    db.from('users').select('email, raw_user_meta_data').eq('id', userId).single(),
   ]);
 
   type RelRow   = { person_id: string; strength: number; reciprocity: number; trust_score: number; stage: string; last_contact_at: string | null; contact_frequency_days: number | null };
@@ -173,16 +173,27 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
   const rels    = (relsRes.data   ?? []) as RelRow[];
   const signals = (signalsRes.data ?? []) as SigRow[];
   const dates   = (datesRes.data  ?? []) as DateRow[];
-  const userEmail = (userRes.data as { email?: string } | null)?.email?.toLowerCase() ?? '';
 
-  // Exclude the logged-in user's own contact entry from candidates
+  type UserRow = { email?: string; raw_user_meta_data?: { full_name?: string; name?: string } };
+  const userRow     = userRes.data as UserRow | null;
+  const userEmail   = userRow?.email?.toLowerCase() ?? '';
+  const userFullName = (userRow?.raw_user_meta_data?.full_name ?? userRow?.raw_user_meta_data?.name ?? '').toLowerCase();
+  const userFirstName = userFullName.split(' ')[0] ?? '';
+
+  // Exclude self by email OR first name (contact may have a different/null email)
   const people = ((peopleRes.data ?? []) as PersonRow[])
-    .filter(p => !userEmail || (p.email?.toLowerCase() ?? '') !== userEmail);
+    .filter(p => {
+      const pEmail = p.email?.toLowerCase() ?? '';
+      const pName  = p.name.toLowerCase();
+      const emailMatch = userEmail.length > 0 && pEmail === userEmail;
+      const nameMatch  = userFirstName.length > 2 && pName.includes(userFirstName);
+      return !emailMatch && !nameMatch;
+    });
 
   console.log('[ACTIONS] Relationships:', rels.length);
   console.log('[ACTIONS] Signals with person_id:', signals.filter(s => s.person_id).length);
   console.log('[ACTIONS] Upcoming dates rows:', dates.length);
-  console.log('[ACTIONS] User email:', userEmail, '— People after self-exclusion:', people.length);
+  console.log('[ACTIONS] User email:', userEmail, '| First name:', userFirstName, '— People after self-exclusion:', people.length);
   if (relsRes.error)    console.error('[ACTIONS] relsRes error:', relsRes.error.message);
   if (signalsRes.error) console.error('[ACTIONS] signalsRes error:', signalsRes.error.message);
   if (peopleRes.error)  console.error('[ACTIONS] peopleRes error:', peopleRes.error.message);
