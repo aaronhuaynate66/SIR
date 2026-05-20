@@ -206,7 +206,7 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
     }
   }
 
-  // ── 3. Score each relationship ────────────────────────────────────────────
+  // ── 3. Build candidate pool from 3 sources ───────────────────────────────
   type Candidate = {
     person: PersonRow; rel: RelRow; score: number;
     urgency: 'high' | 'medium' | 'low'; reason: string;
@@ -214,53 +214,83 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
     upcoming: { label: string; daysUntilDate: number }[];
   };
 
-  const rawMapped = rels
-    .map(rel => {
-      const person = personMap.get(rel.person_id);
-      if (!person) return null;
+  // Fast lookup: real rel row by person_id
+  const relMap = new Map(rels.map(r => [r.person_id, r]));
 
-      const now       = Date.now();
-      const lastMs    = rel.last_contact_at ? new Date(rel.last_contact_at).getTime() : null;
-      const daysSince = lastMs !== null ? Math.floor((now - lastMs) / 86_400_000) : null;
-      const freq      = rel.contact_frequency_days ?? 30;
+  // Synthetic rel for people imported without a relationship row yet
+  const defaultRel = (personId: string): RelRow => ({
+    person_id: personId, strength: 50, reciprocity: 50,
+    trust_score: 0.5, stage: 'prospect',
+    last_contact_at: null, contact_frequency_days: 30,
+  });
 
-      const overdueScore = Math.min(100, (daysSince !== null ? daysSince / freq : 1.5) * 50);
-      const relScore     = Math.round(rel.strength * 0.4 + rel.reciprocity * 0.3 + rel.trust_score * 100 * 0.3);
-      const healthNeed   = 100 - relScore;
-      const stageMap: Record<string, number> = { dormant: 80, prospect: 50, active: 20, strategic: 15 };
-      const stageUrgency = stageMap[rel.stage] ?? 30;
+  // Source A — people with signals in last 30d
+  const signalPersonIds = new Set<string>();
+  for (const s of signals) { if (s.person_id) signalPersonIds.add(s.person_id); }
+  const signalCandidates = [...signalPersonIds].filter(id => personMap.has(id));
+  console.log('[ACTIONS] From signals:', signalCandidates.length);
 
-      let score = Math.round(overdueScore * 0.4 + healthNeed * 0.3 + stageUrgency * 0.3);
+  // Source B — people with a relationship row
+  const relCandidates = rels.filter(r => personMap.has(r.person_id)).map(r => r.person_id);
+  console.log('[ACTIONS] From relationships:', relCandidates.length);
 
-      const upcoming = upcomingDates.get(rel.person_id);
-      if (upcoming && upcoming.length > 0) score += 30;
+  // Source C — people with upcoming dates (next 14d)
+  const datePersonIds = new Set<string>();
+  for (const d of dates) {
+    if (daysUntil(d.date) <= 14 && personMap.has(d.person_id)) datePersonIds.add(d.person_id);
+  }
+  const dateCandidates = [...datePersonIds];
+  console.log('[ACTIONS] From dates:', dateCandidates.length);
 
-      const sigCount = signalMap.get(rel.person_id) ?? 0;
-      if (sigCount > 0) score += 10;
+  // Merge unique person IDs across all 3 sources
+  const mergedIds = new Set([...signalCandidates, ...relCandidates, ...dateCandidates]);
+  console.log('[ACTIONS] Merged unique:', mergedIds.size);
 
-      const urgency: 'high' | 'medium' | 'low' = score >= 65 ? 'high' : score >= 40 ? 'medium' : 'low';
+  // Score every merged candidate
+  const rawCandidates = [...mergedIds].map(personId => {
+    const person = personMap.get(personId)!;
+    const rel    = relMap.get(personId) ?? defaultRel(personId);
 
-      let reason: string;
-      if (upcoming && upcoming.length > 0) {
-        const d = upcoming[0]!;
-        reason = `${d.label} en ${d.daysUntilDate} día${d.daysUntilDate !== 1 ? 's' : ''}`;
-      } else if (rel.stage === 'dormant') {
-        reason = 'Relación dormida — reactívala antes de que sea difícil';
-      } else if (daysSince !== null && daysSince > freq * 1.5) {
-        reason = `Sin contacto hace ${daysSince} días (objetivo: cada ${freq})`;
-      } else if (daysSince !== null && daysSince > freq) {
-        reason = `${daysSince - freq} días pasado tu objetivo de contacto`;
-      } else if (relScore < 40) {
-        reason = 'Relación débil que necesita más atención';
-      } else {
-        reason = 'Buen momento para reforzar el vínculo';
-      }
+    const now       = Date.now();
+    const lastMs    = rel.last_contact_at ? new Date(rel.last_contact_at).getTime() : null;
+    const daysSince = lastMs !== null ? Math.floor((now - lastMs) / 86_400_000) : null;
+    const freq      = rel.contact_frequency_days ?? 30;
 
-      return { person, rel, score, urgency, reason, daysSince, sigCount, upcoming: upcoming ?? [] } as Candidate;
-    });
+    const overdueScore = Math.min(100, (daysSince !== null ? daysSince / freq : 1.5) * 50);
+    const relScore     = Math.round(rel.strength * 0.4 + rel.reciprocity * 0.3 + rel.trust_score * 100 * 0.3);
+    const healthNeed   = 100 - relScore;
+    const stageMap: Record<string, number> = { dormant: 80, prospect: 50, active: 20, strategic: 15 };
+    const stageUrgency = stageMap[rel.stage] ?? 30;
 
-  // Raw candidates snapshot (person found, before score/activity filters)
-  const rawCandidates = rawMapped.filter((c): c is Candidate => c !== null);
+    let score = Math.round(overdueScore * 0.4 + healthNeed * 0.3 + stageUrgency * 0.3);
+
+    const upcoming = upcomingDates.get(personId);
+    if (upcoming && upcoming.length > 0) score += 30;
+
+    const sigCount = signalMap.get(personId) ?? 0;
+    if (sigCount > 0) score += 10;
+
+    const urgency: 'high' | 'medium' | 'low' = score >= 65 ? 'high' : score >= 40 ? 'medium' : 'low';
+
+    let reason: string;
+    if (upcoming && upcoming.length > 0) {
+      const d = upcoming[0]!;
+      reason = `${d.label} en ${d.daysUntilDate} día${d.daysUntilDate !== 1 ? 's' : ''}`;
+    } else if (rel.stage === 'dormant') {
+      reason = 'Relación dormida — reactívala antes de que sea difícil';
+    } else if (daysSince !== null && daysSince > freq * 1.5) {
+      reason = `Sin contacto hace ${daysSince} días (objetivo: cada ${freq})`;
+    } else if (daysSince !== null && daysSince > freq) {
+      reason = `${daysSince - freq} días pasado tu objetivo de contacto`;
+    } else if (relScore < 40) {
+      reason = 'Relación débil que necesita más atención';
+    } else {
+      reason = 'Señales recientes — buen momento para reforzar el vínculo';
+    }
+
+    return { person, rel, score, urgency, reason, daysSince, sigCount, upcoming: upcoming ?? [] } as Candidate;
+  });
+
   console.log('[ACTIONS] Raw candidates (before filter):', JSON.stringify(
     rawCandidates.map(c => ({
       name: c.person.name,
@@ -271,14 +301,11 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
     }))
   ));
 
-  // After score > 10 (self already excluded via people filter above)
+  // Self already excluded via people filter above; drop near-zero scores
   const afterScore = rawCandidates.filter(c => c.score > 10);
   console.log('[ACTIONS] After self-exclusion:', afterScore.length);
 
-  // After requiring real interaction
-  const allScored = afterScore
-    .filter(c => c.rel.last_contact_at !== null || c.sigCount > 0)
-    .sort((a, b) => b.score - a.score);
+  const allScored = afterScore.sort((a, b) => b.score - a.score);
   console.log('[ACTIONS] After activity filter:', allScored.length);
 
   console.log('[ACTIONS] Total candidates after scoring (score>10):', allScored.length,
