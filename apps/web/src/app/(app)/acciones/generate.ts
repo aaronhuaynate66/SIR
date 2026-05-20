@@ -102,7 +102,8 @@ function buildFallback(candidate: {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export async function generateDailyActions(userId: string): Promise<ActionWithPerson[]> {
-  console.log('[ACTIONS] Starting for user:', userId);
+  console.log('[ACTIONS] === FULL DEBUG ===');
+  console.log('[ACTIONS] User ID:', userId);
   const db     = getServiceClient();
   const today  = todayBucket();
 
@@ -213,7 +214,7 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
     upcoming: { label: string; daysUntilDate: number }[];
   };
 
-  const allScored = rels
+  const rawMapped = rels
     .map(rel => {
       const person = personMap.get(rel.person_id);
       if (!person) return null;
@@ -256,21 +257,36 @@ export async function generateDailyActions(userId: string): Promise<ActionWithPe
       }
 
       return { person, rel, score, urgency, reason, daysSince, sigCount, upcoming: upcoming ?? [] } as Candidate;
-    })
-    .filter((c): c is Candidate =>
-      c !== null &&
-      c.score > 10 &&
-      // Only suggest people we've actually interacted with
-      (c.rel.last_contact_at !== null || c.sigCount > 0)
-    )
+    });
+
+  // Raw candidates snapshot (person found, before score/activity filters)
+  const rawCandidates = rawMapped.filter((c): c is Candidate => c !== null);
+  console.log('[ACTIONS] Raw candidates (before filter):', JSON.stringify(
+    rawCandidates.map(c => ({
+      name: c.person.name,
+      email: c.person.email,
+      hasSignals: c.sigCount > 0,
+      hasLastContact: !!c.rel.last_contact_at,
+      score: c.score,
+    }))
+  ));
+
+  // After score > 10 (self already excluded via people filter above)
+  const afterScore = rawCandidates.filter(c => c.score > 10);
+  console.log('[ACTIONS] After self-exclusion:', afterScore.length);
+
+  // After requiring real interaction
+  const allScored = afterScore
+    .filter(c => c.rel.last_contact_at !== null || c.sigCount > 0)
     .sort((a, b) => b.score - a.score);
+  console.log('[ACTIONS] After activity filter:', allScored.length);
 
   console.log('[ACTIONS] Total candidates after scoring (score>10):', allScored.length,
     allScored.slice(0, 5).map(c => `${c.person.name}(${c.score})`));
 
   const scored = allScored.slice(0, 3);
 
-  console.log('[ACTIONS] Final scored:', scored.length, scored.map(c => c.person.name));
+  console.log('[ACTIONS] Final candidates for Claude:', scored.length, scored.map(c => c.person.name));
   if (scored.length === 0) return [];
 
   // ── 4. Build context + call Claude for each candidate ────────────────────
